@@ -1,0 +1,17 @@
+messenger:
+    buses:
+        default:
+        other:
+
+services:
+    - factory: Fixtures\Handler('default result')
+      tags:
+          messenger.messageHandler:
+              bus: default
+              alias: first
+
+    - factory: Fixtures\Handler('other result')
+      tags:
+          messenger.messageHandler:
+              bus: other
+              alias: second

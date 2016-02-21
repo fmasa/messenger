@@ -1,0 +1,32 @@
+{
+	"name": "fmasa/messenger",
+	"description": "Symfony/Messenger integration into Nette Framework",
+	"keywords": ["messenger", "symfony/messenger", "message bus", "command bus", "event bus", "nette"],
+	"type": "library",
+	"license": "MIT",
+	"require": {
+		"php": "^7.1",
+		"symfony/messenger": "^4.3",
+		"nette/di": "^3.0",
+		"mockery/mockery": "^1.2",
+		"nette/schema": "^1.0"
+	},
+	"require-dev": {
+		"phpunit/phpunit": "^6.5",
+		"phpunit/phpcov": "^4.0",
+		"satooshi/php-coveralls": "^2.0",
+		"nette/bootstrap": "^3.0"
+	},
+	"authors": [
+		{
+			"name": "František Maša",
+			"email": "frantisekmasa1@gmail.com"
+		}
+	],
+	"autoload": {
+		"psr-4": {
+			"Fmasa\\": "src/"
+		}
+	},
+	"minimum-stability": "stable"
+}

@@ -1,0 +1,5 @@
+extensions:
+    messenger: Fmasa\Messenger\DI\MessengerExtension
+
+di:
+    debugger: false

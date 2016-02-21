@@ -1,0 +1,10 @@
+messenger:
+    buses:
+        default:
+            singleHandlerPerMessage: true
+services:
+    - class: Fixtures\Handler
+      tags: [messenger.messageHandler]
+
+    - class: Fixtures\Handler
+      tags: [messenger.messageHandler]

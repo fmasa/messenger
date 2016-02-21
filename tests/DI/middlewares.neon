@@ -1,0 +1,11 @@
+messenger:
+    buses:
+        default:
+            singleHandlerPerMessage: true
+            middleware:
+                - Fixtures\StampAddingMiddleware(Fixtures\Stamp('first'))
+                - Fixtures\StampAddingMiddleware(Fixtures\Stamp('second'))
+
+services:
+    - class: Fixtures\Handler
+      tags: [messenger.messageHandler]
