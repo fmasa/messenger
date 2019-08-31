@@ -10,7 +10,7 @@ cache:
 php:
   - 7.1
   - 7.2
-  - nightly
+  - 7.3
 
 matrix:
   include:
@@ -20,6 +20,7 @@ matrix:
     - php: 7.1
       env: COVERAGE="--coverage-clover build/logs/clover.xml"
     - php: 7.2
+    - php: 7.3
 
 before_install:
   - travis_retry composer self-update
@@ -33,5 +34,3 @@ script:
 after_script:
   - if [ "$COVERAGE" != "" ]; then vendor/bin/coveralls --verbose || true; fi
 
-after_failure:
-  - php: nightly
