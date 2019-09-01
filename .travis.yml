@@ -32,5 +32,5 @@ script:
   - vendor/bin/phpunit $COVERAGE
 
 after_script:
-  - if [ "$COVERAGE" != "" ]; then vendor/bin/coveralls --verbose || true; fi
+  - if [ "$COVERAGE" != "" ]; then vendor/bin/php-coveralls --verbose || true; fi
 
