@@ -44,7 +44,7 @@ final class LazyHandlersLocator implements HandlersLocatorInterface
 
             assert(is_callable($service));
 
-            $handlers[] = new HandlerDescriptor($service, ['alias' => $alias]);
+            $handlers[] = new HandlerDescriptor($service, ['alias' => $alias ?? $serviceName]);
         }
 
         return $handlers;

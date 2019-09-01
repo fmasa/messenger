@@ -4,10 +4,14 @@ messenger:
 
 services:
     - factory: Fixtures\Handler('first result')
-      tags: [messenger.messageHandler]
+      tags:
+          messenger.messageHandler:
+              alias: first
 
     - factory: Fixtures\Handler('second result')
-      tags: [messenger.messageHandler]
+      tags:
+          messenger.messageHandler:
+              alias: second
 
     - factory: Fixtures\FixedHandler
       tags: [messenger.messageHandler]

@@ -39,17 +39,32 @@ final class MessengerExtensionTest extends TestCase
         $this->getContainer(__DIR__ . '/singleHandlerPerMessage.neon');
     }
 
-    public function testAllHandlersAreCalled() : void
+    /**
+     * @dataProvider dataMultipleHandlers
+     */
+    public function testMultipleHandlersAreCalled(string $configFiles, array $expectedResults) : void
     {
-        $container = $this->getContainer(__DIR__ . '/multipleHandlers.neon');
+        $container = $this->getContainer($configFiles);
 
         $messageBus = $container->getService('messenger.default.bus');
         assert($messageBus instanceof MessageBusInterface);
 
         $this->assertResultsAreSame(
-            ['first result', 'second result', 'fixed result'],
+            $expectedResults,
             $messageBus->dispatch(new Message())
         );
+    }
+
+    /**
+     * @return (string|string[])[][]
+     */
+    public static function dataMultipleHandlers() : array
+    {
+        return [
+            [__DIR__ . '/multipleHandlers.neon', ['first result', 'second result', 'fixed result']],
+            [__DIR__ . '/multipleHandlersWithAliases.neon', ['first result', 'second result', 'fixed result']],
+            [__DIR__ . '/multipleHandlersWithSameAlias.neon', ['first result', 'fixed result']],
+        ];
     }
 
     public function testHandlersRestrictedToCertainBus() : void
