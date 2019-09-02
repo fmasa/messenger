@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace Fmasa\Messenger\Exceptions;
 
 use Exception;
-use ReflectionParameter;
-use RuntimeException;
+use ReflectionNamedType;
+use ReflectionType;
 
 final class InvalidHandlerService extends Exception
 {
@@ -19,14 +19,14 @@ final class InvalidHandlerService extends Exception
         ));
     }
 
-    public static function missingArgumentType(string $serviceName, ReflectionParameter $parameter) : self
+    public static function missingArgumentType(string $serviceName, string $className, string $parameterName) : self
     {
         return new self(sprintf(
             'Invalid handler service "%s": argument "$%s" of method "%s::__invoke()"'
             . ' must have a type-hint corresponding to the message class it handles.',
             $serviceName,
-            $parameter->getName(),
-            $parameter->getClass()->getName()
+            $parameterName,
+            $className
         ));
     }
 
@@ -40,17 +40,19 @@ final class InvalidHandlerService extends Exception
         ));
     }
 
-    public static function invalidArgumentType(string $serviceName, ReflectionParameter $parameter) : self
-    {
-        $type = $parameter->getType();
-
+    public static function invalidArgumentType(
+        string $serviceName,
+        string $className,
+        string $parameterName,
+        ReflectionType $type
+    ) : self {
         return new self(sprintf(
             'Invalid handler service "%s": type-hint of argument "$%s"'
             . ' in method "%s::__invoke()" must be a class , "%s" given.',
                 $serviceName,
-                $parameter->getName(),
-                $parameter->getClass()->getName(),
-                $type instanceof \ReflectionNamedType ? $type->getName() : (string) $type
+                $parameterName,
+                $className,
+                $type instanceof ReflectionNamedType ? $type->getName() : (string) $type
         ));
     }
 }

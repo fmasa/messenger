@@ -152,14 +152,16 @@ class MessengerExtension extends CompilerExtension
         }
 
         $parameter = $method->getParameters()[0];
+        $parameterName = $parameter->getName();
+        $className = $handlerClass->getName();
         $type = $parameter->getType();
 
         if ($type === null) {
-            throw InvalidHandlerService::missingArgumentType($serviceName, $parameter);
+            throw InvalidHandlerService::missingArgumentType($serviceName, $className, $parameterName);
         }
 
         if ($type->isBuiltin()) {
-            throw InvalidHandlerService::invalidArgumentType($serviceName, $parameter);
+            throw InvalidHandlerService::invalidArgumentType($serviceName, $className, $parameterName, $type);
         }
 
         return [$type->getName()];

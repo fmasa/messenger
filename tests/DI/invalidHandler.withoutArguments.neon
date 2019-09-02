@@ -1,0 +1,7 @@
+messenger:
+    buses:
+        default:
+
+services:
+    - factory: Fixtures\HandlerWithoutArguments
+      tags: [messenger.messageHandler]

@@ -6,6 +6,7 @@ namespace Fmasa\Messenger\DI;
 
 use Fixtures\Message;
 use Fixtures\Stamp;
+use Fmasa\Messenger\Exceptions\InvalidHandlerService;
 use Fmasa\Messenger\Exceptions\MultipleHandlersFound;
 use Nette\Configurator;
 use Nette\DI\Container;
@@ -77,6 +78,30 @@ final class MessengerExtensionTest extends TestCase
 
         $this->assertResultsAreSame(['default result'], $defaultBus->dispatch(new Message()));
         $this->assertResultsAreSame(['other result'], $otherBus->dispatch(new Message()));
+    }
+
+    /**
+     * @dataProvider dataInvalidHandlerConfigs
+     */
+    public function testInvalidHandlersThrowException(string $configFile) : void
+    {
+        $this->expectException(InvalidHandlerService::class);
+
+        $this->getContainer($configFile);
+    }
+
+    /**
+     * @return string[][]
+     */
+    public function dataInvalidHandlerConfigs() : array
+    {
+        return [
+            [__DIR__ . '/invalidHandler.invalidArgumentType.neon'],
+            [__DIR__ . '/invalidHandler.withoutArguments.neon'],
+            [__DIR__ . '/invalidHandler.withoutArgumentType.neon'],
+            [__DIR__ . '/invalidHandler.withoutInvokeMethod.neon'],
+            [__DIR__ . '/invalidHandler.withTooManyArguments.neon'],
+        ];
     }
 
     private function assertResultsAreSame(array $expectedResults, Envelope $envelope) : void

@@ -1,0 +1,7 @@
+messenger:
+    buses:
+        default:
+
+services:
+    - factory: Fixtures\HandlerWithInvalidArgumentType
+      tags: [messenger.messageHandler]
