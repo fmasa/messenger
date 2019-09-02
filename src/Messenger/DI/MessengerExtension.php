@@ -111,6 +111,7 @@ class MessengerExtension extends CompilerExtension
     {
         $builder = $this->getContainerBuilder();
 
+        /** @var string[] $serviceNames */
         $serviceNames = array_keys(
             array_merge(
                 $builder->findByTag(self::TAG_HANDLER),
@@ -135,33 +136,35 @@ class MessengerExtension extends CompilerExtension
      */
     private function getHandledMessageNames(string $serviceName) : iterable
     {
-        $handlerClass = new ReflectionClass($this->getContainerBuilder()->getDefinition($serviceName)->getType());
+        $handlerClassName = $this->getContainerBuilder()->getDefinition($serviceName)->getType();
+        assert(is_string($handlerClassName));
 
-        if ($handlerClass->implementsInterface(MessageSubscriberInterface::class)) {
-            return call_user_func([$handlerClass->getName(), 'getHandledMessages']);
+        $handlerReflection = new ReflectionClass($handlerClassName);
+
+        if ($handlerReflection->implementsInterface(MessageSubscriberInterface::class)) {
+            return call_user_func([$handlerClassName, 'getHandledMessages']);
         }
 
         try {
-            $method = $handlerClass->getMethod('__invoke');
+            $method = $handlerReflection->getMethod('__invoke');
         } catch (ReflectionException $e) {
-            throw InvalidHandlerService::missingInvokeMethod($serviceName, $handlerClass->getName());
+            throw InvalidHandlerService::missingInvokeMethod($serviceName, $handlerReflection->getName());
         }
 
         if ($method->getNumberOfRequiredParameters() !== 1) {
-            throw InvalidHandlerService::wrongAmountOfArguments($serviceName, $handlerClass->getName());
+            throw InvalidHandlerService::wrongAmountOfArguments($serviceName, $handlerReflection->getName());
         }
 
         $parameter = $method->getParameters()[0];
         $parameterName = $parameter->getName();
-        $className = $handlerClass->getName();
         $type = $parameter->getType();
 
         if ($type === null) {
-            throw InvalidHandlerService::missingArgumentType($serviceName, $className, $parameterName);
+            throw InvalidHandlerService::missingArgumentType($serviceName, $handlerClassName, $parameterName);
         }
 
         if ($type->isBuiltin()) {
-            throw InvalidHandlerService::invalidArgumentType($serviceName, $className, $parameterName, $type);
+            throw InvalidHandlerService::invalidArgumentType($serviceName, $handlerClassName, $parameterName, $type);
         }
 
         return [$type->getName()];

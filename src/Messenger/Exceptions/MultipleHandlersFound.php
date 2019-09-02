@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace Fmasa\Messenger\Exceptions;
 
 use Exception;
-use Nette\DI\Definitions\ServiceDefinition;
+use Nette\DI\Definitions\Definition;
 
 final class MultipleHandlersFound extends Exception
 {
     /**
-     * @param ServiceDefinition[] $handlers
+     * @param Definition[] $handlers
      */
     public static function fromHandlerClasses(string $messageName, array $handlers) : self
     {
@@ -20,7 +20,7 @@ final class MultipleHandlersFound extends Exception
             implode(
                 ', ',
                 array_map(
-                    function (ServiceDefinition $definition) : string {
+                    function (Definition $definition) : string {
                         return sprintf('%s (%s)', $definition->getName(), $definition->getType());
                     },
                     $handlers
