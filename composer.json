@@ -5,6 +5,7 @@
 	"type": "library",
 	"license": "MIT",
 	"scripts": {
+		"cs": "vendor/bin/phpcs",
 		"stan": "vendor/bin/phpstan analyse --level 7 src"
 	},
 	"require": {
@@ -19,7 +20,8 @@
 		"phpunit/phpcov": "^4.0",
 		"satooshi/php-coveralls": "^2.0",
 		"nette/bootstrap": "^3.0",
-		"phpstan/phpstan": "^0.11.15"
+		"phpstan/phpstan": "^0.11.15",
+		"doctrine/coding-standard": "^6.0"
 	},
 	"authors": [
 		{

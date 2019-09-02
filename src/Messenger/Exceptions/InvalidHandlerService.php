@@ -7,6 +7,7 @@ namespace Fmasa\Messenger\Exceptions;
 use Exception;
 use ReflectionNamedType;
 use ReflectionType;
+use function sprintf;
 
 final class InvalidHandlerService extends Exception
 {
@@ -49,10 +50,10 @@ final class InvalidHandlerService extends Exception
         return new self(sprintf(
             'Invalid handler service "%s": type-hint of argument "$%s"'
             . ' in method "%s::__invoke()" must be a class , "%s" given.',
-                $serviceName,
-                $parameterName,
-                $className,
-                $type instanceof ReflectionNamedType ? $type->getName() : (string) $type
+            $serviceName,
+            $parameterName,
+            $className,
+            $type instanceof ReflectionNamedType ? $type->getName() : (string) $type
         ));
     }
 }

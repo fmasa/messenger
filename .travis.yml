@@ -21,6 +21,8 @@ jobs:
       env: COVERAGE="--coverage-clover build/logs/clover.xml"
     - php: 7.3
       script: composer stan
+    - php: 7.3
+      script: composer cs
 
 before_install:
   - travis_retry composer self-update

@@ -6,5 +6,4 @@ namespace Fixtures;
 
 final class HandlerWithoutInvokeMethod
 {
-
 }

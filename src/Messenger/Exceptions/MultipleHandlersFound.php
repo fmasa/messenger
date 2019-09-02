@@ -6,6 +6,9 @@ namespace Fmasa\Messenger\Exceptions;
 
 use Exception;
 use Nette\DI\Definitions\Definition;
+use function array_map;
+use function implode;
+use function sprintf;
 
 final class MultipleHandlersFound extends Exception
 {
@@ -20,7 +23,7 @@ final class MultipleHandlersFound extends Exception
             implode(
                 ', ',
                 array_map(
-                    function (Definition $definition) : string {
+                    static function (Definition $definition) : string {
                         return sprintf('%s (%s)', $definition->getName(), $definition->getType());
                     },
                     $handlers

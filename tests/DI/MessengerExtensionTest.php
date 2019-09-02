@@ -14,6 +14,8 @@ use PHPUnit\Framework\TestCase;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\Messenger\Stamp\HandledStamp;
+use function array_map;
+use function assert;
 
 final class MessengerExtensionTest extends TestCase
 {
@@ -41,6 +43,8 @@ final class MessengerExtensionTest extends TestCase
     }
 
     /**
+     * @param string[] $expectedResults
+     *
      * @dataProvider dataMultipleHandlers
      */
     public function testMultipleHandlersAreCalled(string $configFiles, array $expectedResults) : void
@@ -73,7 +77,7 @@ final class MessengerExtensionTest extends TestCase
         $container = $this->getContainer(__DIR__ . '/restrictedHandlers.neon');
 
         $defaultBus = $container->getService('messenger.default.bus');
-        $otherBus = $container->getService('messenger.other.bus');
+        $otherBus   = $container->getService('messenger.other.bus');
         assert($defaultBus instanceof MessageBusInterface && $otherBus instanceof MessageBusInterface);
 
         $this->assertResultsAreSame(['default result'], $defaultBus->dispatch(new Message()));
@@ -104,6 +108,9 @@ final class MessengerExtensionTest extends TestCase
         ];
     }
 
+    /**
+     * @param string[] $expectedResults
+     */
     private function assertResultsAreSame(array $expectedResults, Envelope $envelope) : void
     {
         $stamps = $envelope->all(HandledStamp::class);
@@ -111,7 +118,7 @@ final class MessengerExtensionTest extends TestCase
         $this->assertSame(
             $expectedResults,
             array_map(
-                function (HandledStamp $stamp) : string {
+                static function (HandledStamp $stamp) : string {
                     return $stamp->getResult();
                 },
                 $stamps

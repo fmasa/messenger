@@ -4,26 +4,31 @@ declare(strict_types=1);
 
 namespace Fmasa\Messenger\DI;
 
-use function assert;
-use function call_user_func;
-use function count;
 use Fmasa\Messenger\Exceptions\InvalidHandlerService;
 use Fmasa\Messenger\Exceptions\MultipleHandlersFound;
 use Fmasa\Messenger\LazyHandlersLocator;
+use Nette\DI\CompilerExtension;
 use Nette\DI\Definitions\ServiceDefinition;
 use Nette\Schema\Expect;
 use Nette\Schema\Schema;
-use Nette\DI\CompilerExtension;
 use ReflectionClass;
 use ReflectionException;
 use Symfony\Component\Messenger\Handler\MessageHandlerInterface;
 use Symfony\Component\Messenger\Handler\MessageSubscriberInterface;
 use Symfony\Component\Messenger\MessageBus;
 use Symfony\Component\Messenger\Middleware\HandleMessageMiddleware;
+use function array_filter;
+use function array_keys;
+use function array_map;
+use function array_merge;
+use function assert;
+use function call_user_func;
+use function count;
+use function is_string;
 
 class MessengerExtension extends CompilerExtension
 {
-    private const TAG_HANDLER = 'messenger.messageHandler';
+    private const TAG_HANDLER                   = 'messenger.messageHandler';
     private const HANDLERS_LOCATOR_SERVICE_NAME = '.handlersLocator';
 
     public function getConfigSchema() : Schema
@@ -64,7 +69,7 @@ class MessengerExtension extends CompilerExtension
      */
     public function beforeCompile() : void
     {
-        $config = $this->getConfig();
+        $config  = $this->getConfig();
         $builder = $this->getContainerBuilder();
 
         foreach ($config->buses as $busName => $busConfig) {
@@ -73,7 +78,7 @@ class MessengerExtension extends CompilerExtension
             $handlers = [];
 
             foreach ($this->getHandlersForBus($busName) as $serviceName) {
-                foreach($this->getHandledMessageNames($serviceName) as $messageName) {
+                foreach ($this->getHandledMessageNames($serviceName) as $messageName) {
                     if (! isset($handlers[$messageName])) {
                         $handlers[$messageName] = [];
                     }
@@ -121,7 +126,7 @@ class MessengerExtension extends CompilerExtension
 
         return array_filter(
             $serviceNames,
-            function (string $serviceName) use ($builder, $busName) : bool {
+            static function (string $serviceName) use ($builder, $busName) : bool {
                 $definition = $builder->getDefinition($serviceName);
 
                 return ($definition->getTag(self::TAG_HANDLER)['bus'] ?? $busName) === $busName;
@@ -130,9 +135,9 @@ class MessengerExtension extends CompilerExtension
     }
 
     /**
-     * @throws InvalidHandlerService
-     *
      * @return iterable<string>
+     *
+     * @throws InvalidHandlerService
      */
     private function getHandledMessageNames(string $serviceName) : iterable
     {
@@ -155,9 +160,9 @@ class MessengerExtension extends CompilerExtension
             throw InvalidHandlerService::wrongAmountOfArguments($serviceName, $handlerReflection->getName());
         }
 
-        $parameter = $method->getParameters()[0];
+        $parameter     = $method->getParameters()[0];
         $parameterName = $parameter->getName();
-        $type = $parameter->getType();
+        $type          = $parameter->getType();
 
         if ($type === null) {
             throw InvalidHandlerService::missingArgumentType($serviceName, $handlerClassName, $parameterName);

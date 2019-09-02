@@ -29,7 +29,7 @@ final class LazyHandlersLocator implements HandlersLocatorInterface
     public function __construct(array $handlersMap, Container $container)
     {
         $this->handlersMap = $handlersMap;
-        $this->container = $container;
+        $this->container   = $container;
     }
 
     /**
