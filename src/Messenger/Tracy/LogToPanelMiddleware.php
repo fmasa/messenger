@@ -9,6 +9,13 @@ use Symfony\Component\Messenger\Middleware\MiddlewareInterface;
 use Symfony\Component\Messenger\Middleware\StackInterface;
 use Symfony\Component\Messenger\Stamp\HandledStamp;
 use Tracy\Debugger;
+use function array_map;
+use function count;
+use function explode;
+use function get_class;
+use function implode;
+use function microtime;
+use function round;
 
 final class LogToPanelMiddleware implements MiddlewareInterface
 {

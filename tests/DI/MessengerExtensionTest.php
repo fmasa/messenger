@@ -114,7 +114,7 @@ final class MessengerExtensionTest extends TestCase
         $container = $this->getContainer(__DIR__ . '/twoBusesWithTracy.neon');
 
         $defaultBus = $container->getService('messenger.default.bus');
-        $otherBus = $container->getService('messenger.other.bus');
+        $otherBus   = $container->getService('messenger.other.bus');
         assert($defaultBus instanceof MessageBusInterface && $otherBus instanceof MessageBusInterface);
 
         $defaultBus->dispatch(new Message());

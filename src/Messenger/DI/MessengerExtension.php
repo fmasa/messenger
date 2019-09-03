@@ -35,7 +35,7 @@ class MessengerExtension extends CompilerExtension
     private const TAG_HANDLER                   = 'messenger.messageHandler';
     private const HANDLERS_LOCATOR_SERVICE_NAME = '.handlersLocator';
     private const PANEL_MIDDLEWARE_SERVICE_NAME = '.middleware.panel';
-    private const PANEL_SERVICE_NAME = 'panel';
+    private const PANEL_SERVICE_NAME            = 'panel';
 
     public function getConfigSchema() : Schema
     {
@@ -73,11 +73,13 @@ class MessengerExtension extends CompilerExtension
                 ->setFactory(MessageBus::class, [$middleware]);
         }
 
-        if ($this->isPanelEnabled()) {
-            $builder->addDefinition($this->prefix(self::PANEL_SERVICE_NAME))
-                ->setType(MessengerPanel::class)
-                ->setArguments([$this->getContainerBuilder()->findByType(LogToPanelMiddleware::class)]);
+        if (! $this->isPanelEnabled()) {
+            return;
         }
+
+        $builder->addDefinition($this->prefix(self::PANEL_SERVICE_NAME))
+            ->setType(MessengerPanel::class)
+            ->setArguments([$this->getContainerBuilder()->findByType(LogToPanelMiddleware::class)]);
     }
 
     /**
@@ -128,9 +130,11 @@ class MessengerExtension extends CompilerExtension
 
     public function afterCompile(ClassType $class) : void
     {
-        if ($this->isPanelEnabled()) {
-            $this->enableTracyIntegration($class);
+        if (! $this->isPanelEnabled()) {
+            return;
         }
+
+        $this->enableTracyIntegration($class);
     }
 
     /**
@@ -202,7 +206,8 @@ class MessengerExtension extends CompilerExtension
     private function enableTracyIntegration(ClassType $class) : void
     {
         $class->getMethod('initialize')->addBody($this->getContainerBuilder()->formatPhp('?;', [
-            new Statement('@Tracy\Bar::addPanel',
+            new Statement(
+                '@Tracy\Bar::addPanel',
                 [new Statement('@' . $this->prefix(self::PANEL_SERVICE_NAME))]
             ),
         ]));

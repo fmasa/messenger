@@ -21,9 +21,9 @@ final class HandledMessage
     public function __construct(string $messageName, float $timeInMs, string $messageDump, string $resultDump)
     {
         $this->messageName = $messageName;
-        $this->timeInMs = $timeInMs;
+        $this->timeInMs    = $timeInMs;
         $this->messageDump = $messageDump;
-        $this->resultDump = $resultDump;
+        $this->resultDump  = $resultDump;
     }
 
     public function getMessageName() : string
