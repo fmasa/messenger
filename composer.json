@@ -6,6 +6,11 @@
 	"license": "MIT",
 	"scripts": {
 		"cs": "vendor/bin/phpcs",
+		"check": [
+			"vendor/bin/phpunit",
+			"@stan",
+			"@cs"
+		],
 		"stan": "vendor/bin/phpstan analyse --level 7 src"
 	},
 	"require": {
