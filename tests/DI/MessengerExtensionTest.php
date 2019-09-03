@@ -8,6 +8,7 @@ use Fixtures\Message;
 use Fixtures\Stamp;
 use Fmasa\Messenger\Exceptions\InvalidHandlerService;
 use Fmasa\Messenger\Exceptions\MultipleHandlersFound;
+use Fmasa\Messenger\Tracy\MessengerPanel;
 use Nette\Configurator;
 use Nette\DI\Container;
 use PHPUnit\Framework\TestCase;
@@ -106,6 +107,25 @@ final class MessengerExtensionTest extends TestCase
             [__DIR__ . '/invalidHandler.withoutInvokeMethod.neon'],
             [__DIR__ . '/invalidHandler.withTooManyArguments.neon'],
         ];
+    }
+
+    public function testTracyPanel() : void
+    {
+        $container = $this->getContainer(__DIR__ . '/twoBusesWithTracy.neon');
+
+        $defaultBus = $container->getService('messenger.default.bus');
+        $otherBus = $container->getService('messenger.other.bus');
+        assert($defaultBus instanceof MessageBusInterface && $otherBus instanceof MessageBusInterface);
+
+        $defaultBus->dispatch(new Message());
+        $defaultBus->dispatch(new Message());
+
+        $otherBus->dispatch(new Message());
+
+        $panel = $container->getByType(MessengerPanel::class);
+
+        $this->assertRegExp('~2\+1 messages~', $panel->getTab());
+        $this->assertRegExp('~Handled messages~', $panel->getPanel());
     }
 
     /**

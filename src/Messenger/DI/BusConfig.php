@@ -19,4 +19,7 @@ final class BusConfig
 
     /** @var Statement[] */
     public $middleware = [];
+
+    /** @var bool */
+    public $panel = true;
 }

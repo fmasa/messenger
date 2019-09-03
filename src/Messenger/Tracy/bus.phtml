@@ -1,0 +1,29 @@
+<?php
+    assert(isset($busName) && is_string($busName));
+    assert(isset ($handledMessages) && is_array($handledMessages));
+    assert(isset ($icon) && is_string($icon));
+?>
+<h2><?= $icon ?> <?= $busName ?></h2>
+<div class="tracy-inner-container">
+    <table class="tracy-sortable">
+        <tr>
+            <th>Message name</th>
+            <th>Time (ms)</th>
+            <th>Handled by</th>
+            <th>Message</th>
+            <th>Result</th>
+        </tr>
+
+        <?php foreach ($handledMessages as $handledMessage): ?>
+            <?php assert($handledMessage instanceof \Fmasa\Messenger\Tracy\HandledMessage) ?>
+            <tr>
+                <td> <strong><?= $handledMessage->getMessageName() ?></strong></td>
+                <td><?= $handledMessage->getTimeInMs() ?></td>
+                <td>-</td>
+                <td><?= $handledMessage->getMessageDump() ?></td>
+                <td><?= $handledMessage->getResultDump() ?></td>
+            </tr>
+        <?php endforeach; ?>
+    </table>
+
+</div>

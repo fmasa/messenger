@@ -1,0 +1,19 @@
+<?php
+    assert(isset($buses) && is_array($buses));
+
+?>
+<style>
+    #tracy-debug .tracy-addons-messenger svg {
+        width: 1.4em;
+        height: 1.4em;
+        vertical-align: middle;
+    }
+
+    #tracy-debug .tracy-addons-messenger h2 {
+        font-size: 1.8em;
+    }
+</style>
+<h1>Handled messages</h1>
+<div class="nette-inner tracy-inner tracy-addons-messenger">
+    <?= implode("\n", $buses) ?>
+</div>

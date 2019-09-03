@@ -1,0 +1,12 @@
+messenger:
+    buses:
+        default:
+        other:
+
+services:
+    - factory: Fixtures\Handler('default result')
+      tags: [messenger.messageHandler]
+
+    - factory: Fixtures\Handler('other result')
+      tags: [messenger.messageHandler]
+

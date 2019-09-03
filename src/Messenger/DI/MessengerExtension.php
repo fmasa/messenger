@@ -7,8 +7,12 @@ namespace Fmasa\Messenger\DI;
 use Fmasa\Messenger\Exceptions\InvalidHandlerService;
 use Fmasa\Messenger\Exceptions\MultipleHandlersFound;
 use Fmasa\Messenger\LazyHandlersLocator;
+use Fmasa\Messenger\Tracy\LogToPanelMiddleware;
+use Fmasa\Messenger\Tracy\MessengerPanel;
 use Nette\DI\CompilerExtension;
 use Nette\DI\Definitions\ServiceDefinition;
+use Nette\DI\Definitions\Statement;
+use Nette\PhpGenerator\ClassType;
 use Nette\Schema\Expect;
 use Nette\Schema\Schema;
 use ReflectionClass;
@@ -30,6 +34,8 @@ class MessengerExtension extends CompilerExtension
 {
     private const TAG_HANDLER                   = 'messenger.messageHandler';
     private const HANDLERS_LOCATOR_SERVICE_NAME = '.handlersLocator';
+    private const PANEL_MIDDLEWARE_SERVICE_NAME = '.middleware.panel';
+    private const PANEL_SERVICE_NAME = 'panel';
 
     public function getConfigSchema() : Schema
     {
@@ -47,6 +53,11 @@ class MessengerExtension extends CompilerExtension
 
             $middleware = [];
 
+            if ($busConfig->panel) {
+                $middleware[] = $builder->addDefinition($this->prefix($busName . self::PANEL_MIDDLEWARE_SERVICE_NAME))
+                    ->setFactory(LogToPanelMiddleware::class, [$busName]);
+            }
+
             foreach ($busConfig->middleware as $index => $middlewareDefinition) {
                 $middleware[] = $builder->addDefinition($this->prefix($busName . '.middleware.' . $index))
                     ->setFactory($middlewareDefinition);
@@ -60,6 +71,12 @@ class MessengerExtension extends CompilerExtension
 
             $builder->addDefinition($this->prefix($busName . '.bus'))
                 ->setFactory(MessageBus::class, [$middleware]);
+        }
+
+        if ($this->isPanelEnabled()) {
+            $builder->addDefinition($this->prefix(self::PANEL_SERVICE_NAME))
+                ->setType(MessengerPanel::class)
+                ->setArguments([$this->getContainerBuilder()->findByType(LogToPanelMiddleware::class)]);
         }
     }
 
@@ -106,6 +123,13 @@ class MessengerExtension extends CompilerExtension
             assert($handlersLocator instanceof ServiceDefinition);
 
             $handlersLocator->setArguments([$handlers]);
+        }
+    }
+
+    public function afterCompile(ClassType $class) : void
+    {
+        if ($this->isPanelEnabled()) {
+            $this->enableTracyIntegration($class);
         }
     }
 
@@ -173,5 +197,19 @@ class MessengerExtension extends CompilerExtension
         }
 
         return [$type->getName()];
+    }
+
+    private function enableTracyIntegration(ClassType $class) : void
+    {
+        $class->getMethod('initialize')->addBody($this->getContainerBuilder()->formatPhp('?;', [
+            new Statement('@Tracy\Bar::addPanel',
+                [new Statement('@' . $this->prefix(self::PANEL_SERVICE_NAME))]
+            ),
+        ]));
+    }
+
+    private function isPanelEnabled() : bool
+    {
+        return $this->getContainerBuilder()->findByType(LogToPanelMiddleware::class) !== [];
     }
 }
