@@ -8,6 +8,7 @@ use Fixtures\Message;
 use Fixtures\Stamp;
 use Fmasa\Messenger\Exceptions\InvalidHandlerService;
 use Fmasa\Messenger\Exceptions\MultipleHandlersFound;
+use Fmasa\Messenger\Tracy\LogToPanelMiddleware;
 use Fmasa\Messenger\Tracy\MessengerPanel;
 use Nette\Configurator;
 use Nette\DI\Container;
@@ -126,6 +127,13 @@ final class MessengerExtensionTest extends TestCase
 
         $this->assertRegExp('~2\+1 messages~', $panel->getTab());
         $this->assertRegExp('~Handled messages~', $panel->getPanel());
+    }
+
+    public function testLogToPanelMiddlewareIsNotRegisteredIfPanelIsDisabled() : void
+    {
+        $container = $this->getContainer(__DIR__ . '/withoutPanel.neon');
+
+        $this->assertNull($container->getByType(LogToPanelMiddleware::class, false));
     }
 
     /**
