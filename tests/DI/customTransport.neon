@@ -1,0 +1,13 @@
+messenger:
+    buses:
+        default:
+            singleHandlerPerMessage: true
+    transports:
+        test: custom://foo
+    routing:
+        Fixtures\Message: test
+
+services:
+    - Fixtures\CustomTransport
+    - class: Fixtures\CustomTransportFactory
+      tags: [messenger.transportFactory]

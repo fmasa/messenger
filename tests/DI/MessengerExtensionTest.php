@@ -4,7 +4,11 @@ declare(strict_types=1);
 
 namespace Fmasa\Messenger\DI;
 
+use Fixtures\CustomTransport;
 use Fixtures\Message;
+use Fixtures\Message2;
+use Fixtures\Message3;
+use Fixtures\MessageImplementingInterface;
 use Fixtures\Stamp;
 use Fmasa\Messenger\Exceptions\InvalidHandlerService;
 use Fmasa\Messenger\Exceptions\MultipleHandlersFound;
@@ -16,6 +20,7 @@ use PHPUnit\Framework\TestCase;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\Messenger\Stamp\HandledStamp;
+use Symfony\Component\Messenger\Stamp\SentStamp;
 use function array_map;
 use function assert;
 
@@ -134,6 +139,63 @@ final class MessengerExtensionTest extends TestCase
         $container = $this->getContainer(__DIR__ . '/withoutPanel.neon');
 
         $this->assertNull($container->getByType(LogToPanelMiddleware::class, false));
+    }
+
+    /**
+     * @param mixed    $message
+     * @param string[] $transports
+     *
+     * @dataProvider dataMessagedRoutedToMemoryTransport
+     */
+    public function testMessageIsPassedToTransport($message, array $transports) : void
+    {
+        $container = $this->getContainer(__DIR__ . '/transports.neon');
+
+        $bus = $container->getService('messenger.default.bus');
+        assert($bus instanceof MessageBusInterface);
+
+        $this->assertSame(
+            $transports,
+            array_map(
+                static function (SentStamp $stamp) : string {
+                    return $stamp->getSenderAlias();
+                },
+                $bus->dispatch($message)->all(SentStamp::class)
+            )
+        );
+    }
+
+    /**
+     * @return mixed[]
+     */
+    public static function dataMessagedRoutedToMemoryTransport() : array
+    {
+        return [
+            'message routed to one transport' => [new Message(), ['memory1']],
+            'message routed to one transport (set as array)' => [new Message2(), ['memory1']],
+            'message routed to two transports' => [new Message3(), ['memory1', 'memory2']],
+            'message routed to two transports (to first via interface, to second via class name)'=> [
+                new MessageImplementingInterface(),
+                ['memory2', 'memory1'],
+            ],
+        ];
+    }
+
+    public function testRegisterCustomTransport() : void
+    {
+        $container = $this->getContainer(__DIR__ . '/customTransport.neon');
+
+        $bus = $container->getService('messenger.default.bus');
+        assert($bus instanceof MessageBusInterface);
+
+        $message = new Message();
+
+        $result = $bus->dispatch($message);
+        $stamp = $result->last(SentStamp::class);
+        assert($stamp instanceof SentStamp);
+
+        $this->assertSame('test', $stamp->getSenderAlias());
+        $this->assertSame([$message], $container->getByType(CustomTransport::class)->getSentMessages());
     }
 
     /**

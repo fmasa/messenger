@@ -9,6 +9,7 @@ use Fmasa\Messenger\Exceptions\MultipleHandlersFound;
 use Fmasa\Messenger\LazyHandlersLocator;
 use Fmasa\Messenger\Tracy\LogToPanelMiddleware;
 use Fmasa\Messenger\Tracy\MessengerPanel;
+use Fmasa\Messenger\Transport\SendersLocator;
 use Nette\DI\CompilerExtension;
 use Nette\DI\Definitions\ServiceDefinition;
 use Nette\DI\Definitions\Statement;
@@ -21,6 +22,12 @@ use Symfony\Component\Messenger\Handler\MessageHandlerInterface;
 use Symfony\Component\Messenger\Handler\MessageSubscriberInterface;
 use Symfony\Component\Messenger\MessageBus;
 use Symfony\Component\Messenger\Middleware\HandleMessageMiddleware;
+use Symfony\Component\Messenger\Middleware\SendMessageMiddleware;
+use Symfony\Component\Messenger\Transport\AmqpExt\AmqpTransportFactory;
+use Symfony\Component\Messenger\Transport\InMemoryTransportFactory;
+use Symfony\Component\Messenger\Transport\RedisExt\RedisTransportFactory;
+use Symfony\Component\Messenger\Transport\Serialization\PhpSerializer;
+use Symfony\Component\Messenger\Transport\TransportFactory;
 use function array_filter;
 use function array_keys;
 use function array_map;
@@ -32,21 +39,39 @@ use function is_string;
 
 class MessengerExtension extends CompilerExtension
 {
-    private const TAG_HANDLER                   = 'messenger.messageHandler';
+    private const TAG_HANDLER           = 'messenger.messageHandler';
+    private const TAG_TRANSPORT_FACTORY = 'messenger.transportFactory';
+
     private const HANDLERS_LOCATOR_SERVICE_NAME = '.handlersLocator';
     private const PANEL_MIDDLEWARE_SERVICE_NAME = '.middleware.panel';
     private const PANEL_SERVICE_NAME            = 'panel';
+
+    private const DEFAULT_FACTORIES = [
+        'amqp' => AmqpTransportFactory::class,
+        'inMemory' => InMemoryTransportFactory::class,
+        'redis' => RedisTransportFactory::class,
+    ];
 
     public function getConfigSchema() : Schema
     {
         return Expect::structure([
             'buses' => Expect::arrayOf(Expect::from(new BusConfig())),
+            'transports' => Expect::arrayOf(Expect::anyOf(
+                Expect::string(),
+                Expect::from(new TransportConfig())
+            )),
+            'routing' => Expect::arrayOf(
+                Expect::anyOf(Expect::string(), Expect::listOf(Expect::string()))
+            ),
         ]);
     }
 
     public function loadConfiguration() : void
     {
         $builder = $this->getContainerBuilder();
+
+        $this->processTransports();
+        $this->processRouting();
 
         foreach ($this->getConfig()->buses as $busName => $busConfig) {
             assert($busConfig instanceof BusConfig);
@@ -65,6 +90,9 @@ class MessengerExtension extends CompilerExtension
 
             $handlersLocator = $builder->addDefinition($this->prefix($busName . self::HANDLERS_LOCATOR_SERVICE_NAME))
                 ->setFactory(LazyHandlersLocator::class);
+
+            $middleware[] = $builder->addDefinition($this->prefix($busName . '.sendMiddleware'))
+                ->setFactory(SendMessageMiddleware::class);
 
             $middleware[] = $builder->addDefinition($this->prefix($busName . '.defaultMiddleware'))
                 ->setFactory(HandleMessageMiddleware::class, [$handlersLocator, $busConfig->allowNoHandlers]);
@@ -126,6 +154,8 @@ class MessengerExtension extends CompilerExtension
 
             $handlersLocator->setArguments([$handlers]);
         }
+
+        $this->passRegisteredTransportFactoriesToMainFactory();
     }
 
     public function afterCompile(ClassType $class) : void
@@ -135,6 +165,55 @@ class MessengerExtension extends CompilerExtension
         }
 
         $this->enableTracyIntegration($class);
+    }
+
+    private function processTransports() : void
+    {
+        $builder = $this->getContainerBuilder();
+
+        $transportFactory = $builder->addDefinition($this->prefix('transportFactory'))
+            ->setFactory(TransportFactory::class);
+
+        foreach (self::DEFAULT_FACTORIES as $name => $factoryClass) {
+            $builder->addDefinition($this->prefix('transportFactory.' . $name))
+                ->setFactory($factoryClass)
+                ->setTags([self::TAG_TRANSPORT_FACTORY => true]);
+        }
+
+        $defaultSerializer = $builder->addDefinition($this->prefix('defaultSerializer'))
+            ->setFactory(PhpSerializer::class);
+
+        foreach ($this->getConfig()->transports as $transportName => $transportConfig) {
+            assert(is_string($transportConfig) || $transportConfig instanceof TransportConfig);
+
+            if (is_string($transportConfig)) {
+                $dsn     = $transportConfig;
+                $options = [];
+            } else {
+                $dsn     = $transportConfig->dsn;
+                $options = $transportConfig->options;
+            }
+
+            $builder->addDefinition($this->prefix('transport.' . $transportName))
+                ->setFactory([$transportFactory, 'createTransport'], [$dsn, $options, $defaultSerializer])
+                ->setTags([SendersLocator::TAG_SENDER_ALIAS => $transportName]);
+        }
+    }
+
+    private function processRouting() : void
+    {
+        $this->getContainerBuilder()->addDefinition($this->prefix('sendersLocator'))
+            ->setFactory(
+                SendersLocator::class,
+                [
+                    array_map(
+                        static function ($oneOrManyTransports) : array {
+                                return is_string($oneOrManyTransports) ? [$oneOrManyTransports] : $oneOrManyTransports;
+                        },
+                        $this->getConfig()->routing
+                    ),
+                ]
+            );
     }
 
     /**
@@ -216,5 +295,17 @@ class MessengerExtension extends CompilerExtension
     private function isPanelEnabled() : bool
     {
         return $this->getContainerBuilder()->findByType(LogToPanelMiddleware::class) !== [];
+    }
+
+    private function passRegisteredTransportFactoriesToMainFactory() : void
+    {
+        $builder = $this->getContainerBuilder();
+
+        $transportFactory = $builder->getDefinition($this->prefix('transportFactory'));
+        assert($transportFactory instanceof ServiceDefinition);
+
+        $transportFactory->setArguments([
+            array_map([$builder, 'getDefinition'], array_keys($builder->findByTag(self::TAG_TRANSPORT_FACTORY))),
+        ]);
     }
 }
