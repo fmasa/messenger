@@ -40,5 +40,10 @@
 			"Fmasa\\": "src/"
 		}
 	},
+	"autoload-dev": {
+		"psr-4": {
+			"Fixtures\\": "tests/fixtures"
+		}
+	},
 	"minimum-stability": "stable"
 }
