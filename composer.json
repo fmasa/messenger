@@ -15,7 +15,7 @@
 	},
 	"require": {
 		"php": "^7.1",
-		"symfony/messenger": "^4.3",
+		"symfony/messenger": "^4.3 || ^5.0",
 		"nette/di": "^3.0",
 		"nette/schema": "^1.0",
 		"tracy/tracy": "^2.6"
