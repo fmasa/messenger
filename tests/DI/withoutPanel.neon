@@ -1,4 +1,4 @@
 messenger:
     buses:
         default:
-            panel: off
+            panel: false
