@@ -1,6 +1,6 @@
 # Fmasa/Messenger
 
-The usage is nearly identical to Symfony implementation. There is diffrence in convention - this integration uses camelCase everywhere instead of snake_case.
+The usage is nearly identical to Symfony implementation. There is difference in convention - this integration uses camelCase everywhere instead of snake_case.
 
 Register extension in your config file using:
 ```yaml
