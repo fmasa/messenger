@@ -14,7 +14,7 @@
 		"stan": "vendor/bin/phpstan analyse --level 7 src"
 	},
 	"require": {
-		"php": "^7.1",
+		"php": "^7.2",
 		"symfony/messenger": "^5.0",
 		"nette/di": "^3.0",
 		"nette/schema": "^1.0",
