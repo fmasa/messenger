@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Fmasa\Messenger\DI;
 
 use Fixtures\CustomTransport;
+use Fixtures\CustomTransportFactory;
+use Fixtures\DummySerializer;
 use Fixtures\Message;
 use Fixtures\Message2;
 use Fixtures\Message3;
@@ -196,6 +198,20 @@ final class MessengerExtensionTest extends TestCase
 
         $this->assertSame('test', $stamp->getSenderAlias());
         $this->assertSame([$message], $container->getByType(CustomTransport::class)->getSentMessages());
+    }
+
+    public function testCustomDefaultSerializerIsPassedToSenderWhen() : void
+    {
+        $container = $this->getContainer(__DIR__ . '/defaultSerializer.neon');
+
+        $bus = $container->getService('messenger.default.bus');
+        assert($bus instanceof MessageBusInterface);
+
+        $bus->dispatch(new Message());
+        $this->assertInstanceOf(
+            DummySerializer::class,
+            $container->getByType(CustomTransportFactory::class)->getUsedSerializer()
+        );
     }
 
     /**

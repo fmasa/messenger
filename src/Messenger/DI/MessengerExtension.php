@@ -26,7 +26,7 @@ use Symfony\Component\Messenger\Middleware\SendMessageMiddleware;
 use Symfony\Component\Messenger\Transport\AmqpExt\AmqpTransportFactory;
 use Symfony\Component\Messenger\Transport\InMemoryTransportFactory;
 use Symfony\Component\Messenger\Transport\RedisExt\RedisTransportFactory;
-use Symfony\Component\Messenger\Transport\Serialization\PhpSerializer;
+use Symfony\Component\Messenger\Transport\Serialization\SerializerInterface;
 use Symfony\Component\Messenger\Transport\TransportFactory;
 use function array_filter;
 use function array_keys;
@@ -55,6 +55,7 @@ class MessengerExtension extends CompilerExtension
     public function getConfigSchema() : Schema
     {
         return Expect::structure([
+            'serializer' => Expect::from(new SerializerConfig()),
             'buses' => Expect::arrayOf(Expect::from(new BusConfig())),
             'transports' => Expect::arrayOf(Expect::anyOf(
                 Expect::string(),
@@ -180,8 +181,12 @@ class MessengerExtension extends CompilerExtension
                 ->setTags([self::TAG_TRANSPORT_FACTORY => true]);
         }
 
+        $serializerConfig = $this->getConfig()->serializer;
+        assert($serializerConfig instanceof SerializerConfig);
+
         $defaultSerializer = $builder->addDefinition($this->prefix('defaultSerializer'))
-            ->setFactory(PhpSerializer::class);
+            ->setType(SerializerInterface::class)
+            ->setFactory($serializerConfig->defaultSerializer);
 
         foreach ($this->getConfig()->transports as $transportName => $transportConfig) {
             assert(is_string($transportConfig) || $transportConfig instanceof TransportConfig);

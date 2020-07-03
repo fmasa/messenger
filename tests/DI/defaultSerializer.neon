@@ -1,0 +1,16 @@
+messenger:
+    serializer:
+        defaultSerializer: Fixtures\DummySerializer
+    buses:
+        default:
+            singleHandlerPerMessage: true
+    transports:
+        test:
+            dsn: custom://foo
+    routing:
+        Fixtures\Message: test
+
+services:
+    - Fixtures\CustomTransport
+    - class: Fixtures\CustomTransportFactory
+      tags: [messenger.transportFactory]

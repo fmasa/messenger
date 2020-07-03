@@ -14,6 +14,9 @@ final class CustomTransportFactory implements TransportFactoryInterface
     /** @var CustomTransport */
     private $transport;
 
+    /** @var SerializerInterface|null */
+    private $serializer;
+
     public function __construct(CustomTransport $transport)
     {
         $this->transport = $transport;
@@ -24,7 +27,14 @@ final class CustomTransportFactory implements TransportFactoryInterface
      */
     public function createTransport(string $dsn, array $options, SerializerInterface $serializer) : TransportInterface
     {
+        $this->serializer = $serializer;
+
         return $this->transport;
+    }
+
+    public function getUsedSerializer() : ?SerializerInterface
+    {
+        return $this->serializer;
     }
 
     /**
