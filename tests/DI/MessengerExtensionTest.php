@@ -234,8 +234,11 @@ final class MessengerExtensionTest extends TestCase
 
     private function getContainer(string $configFile) : Container
     {
+        $tempDir = sys_get_temp_dir() . '/' . uniqid('MessengerExtensionTest', true);
+        mkdir($tempDir);
+
         $configurator = new Configurator();
-        $configurator->setTempDirectory(__DIR__ . '/../temp');
+        $configurator->setTempDirectory($tempDir);
         $configurator->setDebugMode(true);
 
         $configurator->addConfig(__DIR__ . '/base.neon');
