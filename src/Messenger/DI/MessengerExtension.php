@@ -9,8 +9,8 @@ use Fmasa\Messenger\Exceptions\MultipleHandlersFound;
 use Fmasa\Messenger\LazyHandlersLocator;
 use Fmasa\Messenger\Tracy\LogToPanelMiddleware;
 use Fmasa\Messenger\Tracy\MessengerPanel;
-use Fmasa\Messenger\Transport\TaggedServiceLocator;
 use Fmasa\Messenger\Transport\SendersLocator;
+use Fmasa\Messenger\Transport\TaggedServiceLocator;
 use Nette\DI\CompilerExtension;
 use Nette\DI\Definitions\ServiceDefinition;
 use Nette\DI\Definitions\Statement;
@@ -344,6 +344,7 @@ class MessengerExtension extends CompilerExtension
         $parameter     = $method->getParameters()[0];
         $parameterName = $parameter->getName();
         $type          = $parameter->getType();
+        assert($type instanceof \ReflectionNamedType || $type === null);
 
         if ($type === null) {
             throw InvalidHandlerService::missingArgumentType($serviceName, $handlerClassName, $parameterName);

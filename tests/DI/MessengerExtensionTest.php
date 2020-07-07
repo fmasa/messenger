@@ -25,6 +25,9 @@ use Symfony\Component\Messenger\Stamp\HandledStamp;
 use Symfony\Component\Messenger\Stamp\SentStamp;
 use function array_map;
 use function assert;
+use function mkdir;
+use function sys_get_temp_dir;
+use function uniqid;
 
 final class MessengerExtensionTest extends TestCase
 {
@@ -193,7 +196,7 @@ final class MessengerExtensionTest extends TestCase
         $message = new Message();
 
         $result = $bus->dispatch($message);
-        $stamp = $result->last(SentStamp::class);
+        $stamp  = $result->last(SentStamp::class);
         assert($stamp instanceof SentStamp);
 
         $this->assertSame('test', $stamp->getSenderAlias());

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Fmasa\Messenger\Exceptions;
 
 use RuntimeException;
+use function sprintf;
 
 class SenderNotFound extends RuntimeException
 {

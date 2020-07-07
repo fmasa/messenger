@@ -21,8 +21,8 @@ final class TaggedServiceLocator implements ContainerInterface
 
     public function __construct(string $tagName, Container $container, ?string $defaultServiceName = null)
     {
-        $this->tagName = $tagName;
-        $this->container = $container;
+        $this->tagName            = $tagName;
+        $this->container          = $container;
         $this->defaultServiceName = $defaultServiceName;
     }
 
@@ -41,10 +41,7 @@ final class TaggedServiceLocator implements ContainerInterface
         throw ServiceNotFound::withTag($this->tagName, $id);
     }
 
-    /**
-     * @return bool
-     */
-    public function has($id)
+    public function has($id) : bool
     {
         foreach ($this->container->findByTag($this->tagName) as $receiverName) {
             if ($receiverName === $id) {

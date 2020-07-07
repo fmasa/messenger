@@ -52,7 +52,10 @@ final class SendersLocator implements SendersLocatorInterface
                 continue;
             }
 
-            return $this->container->getService($serviceName);
+            $sender = $this->container->getService($serviceName);
+            assert($sender instanceof SenderInterface);
+
+            return $sender;
         }
 
         throw SenderNotFound::withAlias($alias);

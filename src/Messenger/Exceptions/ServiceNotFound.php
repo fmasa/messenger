@@ -6,6 +6,7 @@ namespace Fmasa\Messenger\Exceptions;
 
 use Exception;
 use Psr\Container\NotFoundExceptionInterface;
+use function sprintf;
 
 final class ServiceNotFound extends Exception implements NotFoundExceptionInterface
 {
