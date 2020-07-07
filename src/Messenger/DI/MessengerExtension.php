@@ -73,34 +73,7 @@ class MessengerExtension extends CompilerExtension
 
         $this->processTransports();
         $this->processRouting();
-
-        foreach ($this->getConfig()->buses as $busName => $busConfig) {
-            assert($busConfig instanceof BusConfig);
-
-            $middleware = [];
-
-            if ($busConfig->panel) {
-                $middleware[] = $builder->addDefinition($this->prefix($busName . self::PANEL_MIDDLEWARE_SERVICE_NAME))
-                    ->setFactory(LogToPanelMiddleware::class, [$busName]);
-            }
-
-            foreach ($busConfig->middleware as $index => $middlewareDefinition) {
-                $middleware[] = $builder->addDefinition($this->prefix($busName . '.middleware.' . $index))
-                    ->setFactory($middlewareDefinition);
-            }
-
-            $handlersLocator = $builder->addDefinition($this->prefix($busName . self::HANDLERS_LOCATOR_SERVICE_NAME))
-                ->setFactory(LazyHandlersLocator::class);
-
-            $middleware[] = $builder->addDefinition($this->prefix($busName . '.sendMiddleware'))
-                ->setFactory(SendMessageMiddleware::class);
-
-            $middleware[] = $builder->addDefinition($this->prefix($busName . '.defaultMiddleware'))
-                ->setFactory(HandleMessageMiddleware::class, [$handlersLocator, $busConfig->allowNoHandlers]);
-
-            $builder->addDefinition($this->prefix($busName . '.bus'))
-                ->setFactory(MessageBus::class, [$middleware]);
-        }
+        $this->processBuses();
 
         if (! $this->isPanelEnabled()) {
             return;
@@ -166,6 +139,39 @@ class MessengerExtension extends CompilerExtension
         }
 
         $this->enableTracyIntegration($class);
+    }
+
+    private function processBuses() : void
+    {
+        $builder = $this->getContainerBuilder();
+
+        foreach ($this->getConfig()->buses as $busName => $busConfig) {
+            assert($busConfig instanceof BusConfig);
+
+            $middleware = [];
+
+            if ($busConfig->panel) {
+                $middleware[] = $builder->addDefinition($this->prefix($busName . self::PANEL_MIDDLEWARE_SERVICE_NAME))
+                    ->setFactory(LogToPanelMiddleware::class, [$busName]);
+            }
+
+            foreach ($busConfig->middleware as $index => $middlewareDefinition) {
+                $middleware[] = $builder->addDefinition($this->prefix($busName . '.middleware.' . $index))
+                    ->setFactory($middlewareDefinition);
+            }
+
+            $handlersLocator = $builder->addDefinition($this->prefix($busName . self::HANDLERS_LOCATOR_SERVICE_NAME))
+                ->setFactory(LazyHandlersLocator::class);
+
+            $middleware[] = $builder->addDefinition($this->prefix($busName . '.sendMiddleware'))
+                ->setFactory(SendMessageMiddleware::class);
+
+            $middleware[] = $builder->addDefinition($this->prefix($busName . '.defaultMiddleware'))
+                ->setFactory(HandleMessageMiddleware::class, [$handlersLocator, $busConfig->allowNoHandlers]);
+
+            $builder->addDefinition($this->prefix($busName . '.bus'))
+                ->setFactory(MessageBus::class, [$middleware]);
+        }
     }
 
     private function processTransports() : void
