@@ -9,6 +9,7 @@ use Fmasa\Messenger\Exceptions\MultipleHandlersFound;
 use Fmasa\Messenger\LazyHandlersLocator;
 use Fmasa\Messenger\Tracy\LogToPanelMiddleware;
 use Fmasa\Messenger\Tracy\MessengerPanel;
+use Fmasa\Messenger\Transport\TaggedServiceLocator;
 use Fmasa\Messenger\Transport\SendersLocator;
 use Nette\DI\CompilerExtension;
 use Nette\DI\Definitions\ServiceDefinition;
@@ -18,13 +19,19 @@ use Nette\Schema\Expect;
 use Nette\Schema\Schema;
 use ReflectionClass;
 use ReflectionException;
+use Symfony\Component\EventDispatcher\EventDispatcher;
 use Symfony\Component\Messenger\Bridge\Amqp\Transport\AmqpTransportFactory;
 use Symfony\Component\Messenger\Bridge\Redis\Transport\RedisTransportFactory;
+use Symfony\Component\Messenger\Command\ConsumeMessagesCommand;
+use Symfony\Component\Messenger\EventListener\DispatchPcntlSignalListener;
+use Symfony\Component\Messenger\EventListener\SendFailedMessageForRetryListener;
+use Symfony\Component\Messenger\EventListener\StopWorkerOnSigtermSignalListener;
 use Symfony\Component\Messenger\Handler\MessageHandlerInterface;
 use Symfony\Component\Messenger\Handler\MessageSubscriberInterface;
 use Symfony\Component\Messenger\MessageBus;
 use Symfony\Component\Messenger\Middleware\HandleMessageMiddleware;
 use Symfony\Component\Messenger\Middleware\SendMessageMiddleware;
+use Symfony\Component\Messenger\RoutableMessageBus;
 use Symfony\Component\Messenger\Transport\InMemoryTransportFactory;
 use Symfony\Component\Messenger\Transport\Serialization\SerializerInterface;
 use Symfony\Component\Messenger\Transport\TransportFactory;
@@ -41,6 +48,9 @@ class MessengerExtension extends CompilerExtension
 {
     private const TAG_HANDLER           = 'messenger.messageHandler';
     private const TAG_TRANSPORT_FACTORY = 'messenger.transportFactory';
+    private const TAG_RECEIVER_ALIAS    = 'messenger.receiver.alias';
+    private const TAG_BUS_NAME          = 'messenger.bus.name';
+    private const TAG_RETRY_STRATEGY    = 'messenger.retryStrategy';
 
     private const HANDLERS_LOCATOR_SERVICE_NAME = '.handlersLocator';
     private const PANEL_MIDDLEWARE_SERVICE_NAME = '.middleware.panel';
@@ -74,6 +84,7 @@ class MessengerExtension extends CompilerExtension
         $this->processTransports();
         $this->processRouting();
         $this->processBuses();
+        $this->processConsoleCommands();
 
         if (! $this->isPanelEnabled()) {
             return;
@@ -174,6 +185,53 @@ class MessengerExtension extends CompilerExtension
         }
     }
 
+    /**
+     * @return Statement[]
+     */
+    private function getSubscribers() : array
+    {
+        return [
+            new Statement(DispatchPcntlSignalListener::class),
+            new Statement(
+                SendFailedMessageForRetryListener::class,
+                [
+                    new Statement(TaggedServiceLocator::class, [SendersLocator::TAG_SENDER_ALIAS]),
+                    new Statement(TaggedServiceLocator::class, [self::TAG_RETRY_STRATEGY]),
+                ]
+            ),
+            // TODO: Add support for failed transport
+            // new Statement(SendFailedMessageToFailureTransportListener::class),
+            new Statement(StopWorkerOnSigtermSignalListener::class),
+        ];
+    }
+
+    private function processConsoleCommands() : void
+    {
+        $builder = $this->getContainerBuilder();
+
+        $routableBus = $builder->addDefinition($this->prefix('busLocator'))
+            ->setAutowired(false)
+            ->setFactory(
+                RoutableMessageBus::class,
+                [new Statement(TaggedServiceLocator::class, [self::TAG_BUS_NAME]), null]
+            );
+
+        $receiverLocator = $builder->addDefinition($this->prefix('console.receiversLocator'))
+            ->setFactory(TaggedServiceLocator::class, [self::TAG_RECEIVER_ALIAS])
+            ->setAutowired(false);
+
+        $eventDispatcher = $builder->addDefinition($this->prefix('console.eventDispatcher'))
+            ->setFactory(EventDispatcher::class)
+            ->setAutowired(false);
+
+        foreach ($this->getSubscribers() as $subscriber) {
+            $eventDispatcher->addSetup('addSubscriber', [$subscriber]);
+        }
+
+        $builder->addDefinition($this->prefix('console.command.consumeMessages'))
+            ->setFactory(ConsumeMessagesCommand::class, [$routableBus, $receiverLocator, $eventDispatcher]);
+    }
+
     private function processTransports() : void
     {
         $builder = $this->getContainerBuilder();
@@ -205,9 +263,14 @@ class MessengerExtension extends CompilerExtension
                 $options = $transportConfig->options;
             }
 
-            $builder->addDefinition($this->prefix('transport.' . $transportName))
+            $transportServiceName = $this->prefix('transport.' . $transportName);
+
+            $builder->addDefinition($transportServiceName)
                 ->setFactory([$transportFactory, 'createTransport'], [$dsn, $options, $defaultSerializer])
-                ->setTags([SendersLocator::TAG_SENDER_ALIAS => $transportName]);
+                ->setTags([
+                    SendersLocator::TAG_SENDER_ALIAS => $transportName,
+                    self::TAG_RECEIVER_ALIAS => $transportName,
+                ]);
         }
     }
 
