@@ -4,7 +4,13 @@ declare(strict_types=1);
 
 namespace Fmasa\Messenger\DI;
 
+use Fixtures\CustomTransport;
+use Fixtures\CustomTransportFactory;
+use Fixtures\DummySerializer;
 use Fixtures\Message;
+use Fixtures\Message2;
+use Fixtures\Message3;
+use Fixtures\MessageImplementingInterface;
 use Fixtures\Stamp;
 use Fmasa\Messenger\Exceptions\InvalidHandlerService;
 use Fmasa\Messenger\Exceptions\MultipleHandlersFound;
@@ -16,8 +22,12 @@ use PHPUnit\Framework\TestCase;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\Messenger\Stamp\HandledStamp;
+use Symfony\Component\Messenger\Stamp\SentStamp;
 use function array_map;
 use function assert;
+use function mkdir;
+use function sys_get_temp_dir;
+use function uniqid;
 
 final class MessengerExtensionTest extends TestCase
 {
@@ -137,6 +147,77 @@ final class MessengerExtensionTest extends TestCase
     }
 
     /**
+     * @param mixed    $message
+     * @param string[] $transports
+     *
+     * @dataProvider dataMessagedRoutedToMemoryTransport
+     */
+    public function testMessageIsPassedToTransport($message, array $transports) : void
+    {
+        $container = $this->getContainer(__DIR__ . '/transports.neon');
+
+        $bus = $container->getService('messenger.default.bus');
+        assert($bus instanceof MessageBusInterface);
+
+        $this->assertSame(
+            $transports,
+            array_map(
+                static function (SentStamp $stamp) : string {
+                    return $stamp->getSenderAlias();
+                },
+                $bus->dispatch($message)->all(SentStamp::class)
+            )
+        );
+    }
+
+    /**
+     * @return mixed[]
+     */
+    public static function dataMessagedRoutedToMemoryTransport() : array
+    {
+        return [
+            'message routed to one transport' => [new Message(), ['memory1']],
+            'message routed to one transport (set as array)' => [new Message2(), ['memory1']],
+            'message routed to two transports' => [new Message3(), ['memory1', 'memory2']],
+            'message routed to two transports (to first via interface, to second via class name)'=> [
+                new MessageImplementingInterface(),
+                ['memory2', 'memory1'],
+            ],
+        ];
+    }
+
+    public function testRegisterCustomTransport() : void
+    {
+        $container = $this->getContainer(__DIR__ . '/customTransport.neon');
+
+        $bus = $container->getService('messenger.default.bus');
+        assert($bus instanceof MessageBusInterface);
+
+        $message = new Message();
+
+        $result = $bus->dispatch($message);
+        $stamp  = $result->last(SentStamp::class);
+        assert($stamp instanceof SentStamp);
+
+        $this->assertSame('test', $stamp->getSenderAlias());
+        $this->assertSame([$message], $container->getByType(CustomTransport::class)->getSentMessages());
+    }
+
+    public function testCustomDefaultSerializerIsPassedToSenderWhen() : void
+    {
+        $container = $this->getContainer(__DIR__ . '/defaultSerializer.neon');
+
+        $bus = $container->getService('messenger.default.bus');
+        assert($bus instanceof MessageBusInterface);
+
+        $bus->dispatch(new Message());
+        $this->assertInstanceOf(
+            DummySerializer::class,
+            $container->getByType(CustomTransportFactory::class)->getUsedSerializer()
+        );
+    }
+
+    /**
      * @param string[] $expectedResults
      */
     private function assertResultsAreSame(array $expectedResults, Envelope $envelope) : void
@@ -156,13 +237,12 @@ final class MessengerExtensionTest extends TestCase
 
     private function getContainer(string $configFile) : Container
     {
-        $configurator = new Configurator();
-        $configurator->setTempDirectory(__DIR__ . '/../temp');
-        $configurator->setDebugMode(true);
+        $tempDir = sys_get_temp_dir() . '/' . uniqid('MessengerExtensionTest', true);
+        mkdir($tempDir);
 
-        $robotLoader = $configurator->createRobotLoader();
-        $robotLoader->addDirectory(__DIR__ . '/../fixtures');
-        $robotLoader->register();
+        $configurator = new Configurator();
+        $configurator->setTempDirectory($tempDir);
+        $configurator->setDebugMode(true);
 
         $configurator->addConfig(__DIR__ . '/base.neon');
         $configurator->addConfig($configFile);

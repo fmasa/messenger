@@ -15,6 +15,7 @@
 	},
 	"require": {
 		"php": "^7.2",
+		"symfony/event-dispatcher": "^4.4|^5.0",
 		"symfony/messenger": "^5.0",
 		"nette/di": "^3.0",
 		"nette/schema": "^1.0",
@@ -26,7 +27,7 @@
 		"phpunit/phpcov": "^4.0",
 		"satooshi/php-coveralls": "^2.0",
 		"nette/bootstrap": "^3.0",
-		"phpstan/phpstan": "^0.11.15",
+		"phpstan/phpstan": "^0.12",
 		"doctrine/coding-standard": "^6.0"
 	},
 	"authors": [
@@ -38,6 +39,11 @@
 	"autoload": {
 		"psr-4": {
 			"Fmasa\\": "src/"
+		}
+	},
+	"autoload-dev": {
+		"psr-4": {
+			"Fixtures\\": "tests/fixtures"
 		}
 	},
 	"minimum-stability": "stable"

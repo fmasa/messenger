@@ -1,0 +1,18 @@
+messenger:
+    buses:
+        default:
+            singleHandlerPerMessage: true
+    transports:
+        memory1: in-memory://a
+        memory2: in-memory://b
+    routing:
+        Fixtures\Message: memory1
+        Fixtures\Message2: memory1
+        Fixtures\Message3: [memory1, memory2]
+        Fixtures\MessageInterface: [memory1]
+        Fixtures\MessageImplementingInterface: [memory2]
+
+services:
+    - Fixtures\CustomTransport
+    - class: Fixtures\CustomTransportFactory
+      tags: [messenger.transportFactory]

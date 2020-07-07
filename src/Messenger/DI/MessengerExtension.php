@@ -9,6 +9,8 @@ use Fmasa\Messenger\Exceptions\MultipleHandlersFound;
 use Fmasa\Messenger\LazyHandlersLocator;
 use Fmasa\Messenger\Tracy\LogToPanelMiddleware;
 use Fmasa\Messenger\Tracy\MessengerPanel;
+use Fmasa\Messenger\Transport\SendersLocator;
+use Fmasa\Messenger\Transport\TaggedServiceLocator;
 use Nette\DI\CompilerExtension;
 use Nette\DI\Definitions\ServiceDefinition;
 use Nette\DI\Definitions\Statement;
@@ -17,10 +19,22 @@ use Nette\Schema\Expect;
 use Nette\Schema\Schema;
 use ReflectionClass;
 use ReflectionException;
+use Symfony\Component\EventDispatcher\EventDispatcher;
+use Symfony\Component\Messenger\Bridge\Amqp\Transport\AmqpTransportFactory;
+use Symfony\Component\Messenger\Bridge\Redis\Transport\RedisTransportFactory;
+use Symfony\Component\Messenger\Command\ConsumeMessagesCommand;
+use Symfony\Component\Messenger\EventListener\DispatchPcntlSignalListener;
+use Symfony\Component\Messenger\EventListener\SendFailedMessageForRetryListener;
+use Symfony\Component\Messenger\EventListener\StopWorkerOnSigtermSignalListener;
 use Symfony\Component\Messenger\Handler\MessageHandlerInterface;
 use Symfony\Component\Messenger\Handler\MessageSubscriberInterface;
 use Symfony\Component\Messenger\MessageBus;
 use Symfony\Component\Messenger\Middleware\HandleMessageMiddleware;
+use Symfony\Component\Messenger\Middleware\SendMessageMiddleware;
+use Symfony\Component\Messenger\RoutableMessageBus;
+use Symfony\Component\Messenger\Transport\InMemoryTransportFactory;
+use Symfony\Component\Messenger\Transport\Serialization\SerializerInterface;
+use Symfony\Component\Messenger\Transport\TransportFactory;
 use function array_filter;
 use function array_keys;
 use function array_map;
@@ -32,15 +46,34 @@ use function is_string;
 
 class MessengerExtension extends CompilerExtension
 {
-    private const TAG_HANDLER                   = 'messenger.messageHandler';
+    private const TAG_HANDLER           = 'messenger.messageHandler';
+    private const TAG_TRANSPORT_FACTORY = 'messenger.transportFactory';
+    private const TAG_RECEIVER_ALIAS    = 'messenger.receiver.alias';
+    private const TAG_BUS_NAME          = 'messenger.bus.name';
+    private const TAG_RETRY_STRATEGY    = 'messenger.retryStrategy';
+
     private const HANDLERS_LOCATOR_SERVICE_NAME = '.handlersLocator';
     private const PANEL_MIDDLEWARE_SERVICE_NAME = '.middleware.panel';
     private const PANEL_SERVICE_NAME            = 'panel';
 
+    private const DEFAULT_FACTORIES = [
+        'amqp' => AmqpTransportFactory::class,
+        'inMemory' => InMemoryTransportFactory::class,
+        'redis' => RedisTransportFactory::class,
+    ];
+
     public function getConfigSchema() : Schema
     {
         return Expect::structure([
+            'serializer' => Expect::from(new SerializerConfig()),
             'buses' => Expect::arrayOf(Expect::from(new BusConfig())),
+            'transports' => Expect::arrayOf(Expect::anyOf(
+                Expect::string(),
+                Expect::from(new TransportConfig())
+            )),
+            'routing' => Expect::arrayOf(
+                Expect::anyOf(Expect::string(), Expect::listOf(Expect::string()))
+            ),
         ]);
     }
 
@@ -48,30 +81,10 @@ class MessengerExtension extends CompilerExtension
     {
         $builder = $this->getContainerBuilder();
 
-        foreach ($this->getConfig()->buses as $busName => $busConfig) {
-            assert($busConfig instanceof BusConfig);
-
-            $middleware = [];
-
-            if ($busConfig->panel) {
-                $middleware[] = $builder->addDefinition($this->prefix($busName . self::PANEL_MIDDLEWARE_SERVICE_NAME))
-                    ->setFactory(LogToPanelMiddleware::class, [$busName]);
-            }
-
-            foreach ($busConfig->middleware as $index => $middlewareDefinition) {
-                $middleware[] = $builder->addDefinition($this->prefix($busName . '.middleware.' . $index))
-                    ->setFactory($middlewareDefinition);
-            }
-
-            $handlersLocator = $builder->addDefinition($this->prefix($busName . self::HANDLERS_LOCATOR_SERVICE_NAME))
-                ->setFactory(LazyHandlersLocator::class);
-
-            $middleware[] = $builder->addDefinition($this->prefix($busName . '.defaultMiddleware'))
-                ->setFactory(HandleMessageMiddleware::class, [$handlersLocator, $busConfig->allowNoHandlers]);
-
-            $builder->addDefinition($this->prefix($busName . '.bus'))
-                ->setFactory(MessageBus::class, [$middleware]);
-        }
+        $this->processTransports();
+        $this->processRouting();
+        $this->processBuses();
+        $this->processConsoleCommands();
 
         if (! $this->isPanelEnabled()) {
             return;
@@ -126,6 +139,8 @@ class MessengerExtension extends CompilerExtension
 
             $handlersLocator->setArguments([$handlers]);
         }
+
+        $this->passRegisteredTransportFactoriesToMainFactory();
     }
 
     public function afterCompile(ClassType $class) : void
@@ -135,6 +150,144 @@ class MessengerExtension extends CompilerExtension
         }
 
         $this->enableTracyIntegration($class);
+    }
+
+    private function processBuses() : void
+    {
+        $builder = $this->getContainerBuilder();
+
+        foreach ($this->getConfig()->buses as $busName => $busConfig) {
+            assert($busConfig instanceof BusConfig);
+
+            $middleware = [];
+
+            if ($busConfig->panel) {
+                $middleware[] = $builder->addDefinition($this->prefix($busName . self::PANEL_MIDDLEWARE_SERVICE_NAME))
+                    ->setFactory(LogToPanelMiddleware::class, [$busName]);
+            }
+
+            foreach ($busConfig->middleware as $index => $middlewareDefinition) {
+                $middleware[] = $builder->addDefinition($this->prefix($busName . '.middleware.' . $index))
+                    ->setFactory($middlewareDefinition);
+            }
+
+            $handlersLocator = $builder->addDefinition($this->prefix($busName . self::HANDLERS_LOCATOR_SERVICE_NAME))
+                ->setFactory(LazyHandlersLocator::class);
+
+            $middleware[] = $builder->addDefinition($this->prefix($busName . '.sendMiddleware'))
+                ->setFactory(SendMessageMiddleware::class);
+
+            $middleware[] = $builder->addDefinition($this->prefix($busName . '.defaultMiddleware'))
+                ->setFactory(HandleMessageMiddleware::class, [$handlersLocator, $busConfig->allowNoHandlers]);
+
+            $builder->addDefinition($this->prefix($busName . '.bus'))
+                ->setFactory(MessageBus::class, [$middleware]);
+        }
+    }
+
+    /**
+     * @return Statement[]
+     */
+    private function getSubscribers() : array
+    {
+        return [
+            new Statement(DispatchPcntlSignalListener::class),
+            new Statement(
+                SendFailedMessageForRetryListener::class,
+                [
+                    new Statement(TaggedServiceLocator::class, [SendersLocator::TAG_SENDER_ALIAS]),
+                    new Statement(TaggedServiceLocator::class, [self::TAG_RETRY_STRATEGY]),
+                ]
+            ),
+            // TODO: Add support for failed transport
+            // new Statement(SendFailedMessageToFailureTransportListener::class),
+            new Statement(StopWorkerOnSigtermSignalListener::class),
+        ];
+    }
+
+    private function processConsoleCommands() : void
+    {
+        $builder = $this->getContainerBuilder();
+
+        $routableBus = $builder->addDefinition($this->prefix('busLocator'))
+            ->setAutowired(false)
+            ->setFactory(
+                RoutableMessageBus::class,
+                [new Statement(TaggedServiceLocator::class, [self::TAG_BUS_NAME]), null]
+            );
+
+        $receiverLocator = $builder->addDefinition($this->prefix('console.receiversLocator'))
+            ->setFactory(TaggedServiceLocator::class, [self::TAG_RECEIVER_ALIAS])
+            ->setAutowired(false);
+
+        $eventDispatcher = $builder->addDefinition($this->prefix('console.eventDispatcher'))
+            ->setFactory(EventDispatcher::class)
+            ->setAutowired(false);
+
+        foreach ($this->getSubscribers() as $subscriber) {
+            $eventDispatcher->addSetup('addSubscriber', [$subscriber]);
+        }
+
+        $builder->addDefinition($this->prefix('console.command.consumeMessages'))
+            ->setFactory(ConsumeMessagesCommand::class, [$routableBus, $receiverLocator, $eventDispatcher]);
+    }
+
+    private function processTransports() : void
+    {
+        $builder = $this->getContainerBuilder();
+
+        $transportFactory = $builder->addDefinition($this->prefix('transportFactory'))
+            ->setFactory(TransportFactory::class);
+
+        foreach (self::DEFAULT_FACTORIES as $name => $factoryClass) {
+            $builder->addDefinition($this->prefix('transportFactory.' . $name))
+                ->setFactory($factoryClass)
+                ->setTags([self::TAG_TRANSPORT_FACTORY => true]);
+        }
+
+        $serializerConfig = $this->getConfig()->serializer;
+        assert($serializerConfig instanceof SerializerConfig);
+
+        $defaultSerializer = $builder->addDefinition($this->prefix('defaultSerializer'))
+            ->setType(SerializerInterface::class)
+            ->setFactory($serializerConfig->defaultSerializer);
+
+        foreach ($this->getConfig()->transports as $transportName => $transportConfig) {
+            assert(is_string($transportConfig) || $transportConfig instanceof TransportConfig);
+
+            if (is_string($transportConfig)) {
+                $dsn     = $transportConfig;
+                $options = [];
+            } else {
+                $dsn     = $transportConfig->dsn;
+                $options = $transportConfig->options;
+            }
+
+            $transportServiceName = $this->prefix('transport.' . $transportName);
+
+            $builder->addDefinition($transportServiceName)
+                ->setFactory([$transportFactory, 'createTransport'], [$dsn, $options, $defaultSerializer])
+                ->setTags([
+                    SendersLocator::TAG_SENDER_ALIAS => $transportName,
+                    self::TAG_RECEIVER_ALIAS => $transportName,
+                ]);
+        }
+    }
+
+    private function processRouting() : void
+    {
+        $this->getContainerBuilder()->addDefinition($this->prefix('sendersLocator'))
+            ->setFactory(
+                SendersLocator::class,
+                [
+                    array_map(
+                        static function ($oneOrManyTransports) : array {
+                                return is_string($oneOrManyTransports) ? [$oneOrManyTransports] : $oneOrManyTransports;
+                        },
+                        $this->getConfig()->routing
+                    ),
+                ]
+            );
     }
 
     /**
@@ -191,6 +344,7 @@ class MessengerExtension extends CompilerExtension
         $parameter     = $method->getParameters()[0];
         $parameterName = $parameter->getName();
         $type          = $parameter->getType();
+        assert($type instanceof \ReflectionNamedType || $type === null);
 
         if ($type === null) {
             throw InvalidHandlerService::missingArgumentType($serviceName, $handlerClassName, $parameterName);
@@ -216,5 +370,17 @@ class MessengerExtension extends CompilerExtension
     private function isPanelEnabled() : bool
     {
         return $this->getContainerBuilder()->findByType(LogToPanelMiddleware::class) !== [];
+    }
+
+    private function passRegisteredTransportFactoriesToMainFactory() : void
+    {
+        $builder = $this->getContainerBuilder();
+
+        $transportFactory = $builder->getDefinition($this->prefix('transportFactory'));
+        assert($transportFactory instanceof ServiceDefinition);
+
+        $transportFactory->setArguments([
+            array_map([$builder, 'getDefinition'], array_keys($builder->findByTag(self::TAG_TRANSPORT_FACTORY))),
+        ]);
     }
 }
