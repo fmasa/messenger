@@ -8,6 +8,9 @@ use Fmasa\Messenger\Exceptions\ServiceNotFound;
 use Nette\DI\Container;
 use Psr\Container\ContainerInterface;
 
+// ContainerInterface does not use typehints, so we cannot add them without breaking LSP
+// phpcs:disable SlevomatCodingStandard.TypeHints.TypeHintDeclaration
+
 final class TaggedServiceLocator implements ContainerInterface
 {
     /** @var string */
@@ -26,6 +29,9 @@ final class TaggedServiceLocator implements ContainerInterface
         $this->defaultServiceName = $defaultServiceName;
     }
 
+    /**
+     * @return object
+     */
     public function get($id)
     {
         foreach ($this->container->findByTag($this->tagName) as $serviceName => $receiverName) {
@@ -41,6 +47,9 @@ final class TaggedServiceLocator implements ContainerInterface
         throw ServiceNotFound::withTag($this->tagName, $id);
     }
 
+    /**
+     * @param string $id
+     */
     public function has($id) : bool
     {
         foreach ($this->container->findByTag($this->tagName) as $receiverName) {

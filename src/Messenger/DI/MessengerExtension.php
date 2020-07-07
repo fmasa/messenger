@@ -19,6 +19,7 @@ use Nette\Schema\Expect;
 use Nette\Schema\Schema;
 use ReflectionClass;
 use ReflectionException;
+use ReflectionNamedType;
 use Symfony\Component\EventDispatcher\EventDispatcher;
 use Symfony\Component\Messenger\Bridge\Amqp\Transport\AmqpTransportFactory;
 use Symfony\Component\Messenger\Bridge\Redis\Transport\RedisTransportFactory;
@@ -344,7 +345,7 @@ class MessengerExtension extends CompilerExtension
         $parameter     = $method->getParameters()[0];
         $parameterName = $parameter->getName();
         $type          = $parameter->getType();
-        assert($type instanceof \ReflectionNamedType || $type === null);
+        assert($type instanceof ReflectionNamedType || $type === null);
 
         if ($type === null) {
             throw InvalidHandlerService::missingArgumentType($serviceName, $handlerClassName, $parameterName);

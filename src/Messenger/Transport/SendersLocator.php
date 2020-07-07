@@ -10,6 +10,7 @@ use Nette\DI\Container;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\Transport\Sender\SenderInterface;
 use Symfony\Component\Messenger\Transport\Sender\SendersLocatorInterface;
+use function assert;
 
 final class SendersLocator implements SendersLocatorInterface
 {
