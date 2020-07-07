@@ -1,7 +1,7 @@
 {
 	"name": "fmasa/messenger",
 	"description": "Symfony/Messenger integration into Nette Framework",
-	"keywords": ["messenger", "symfony/messenger", "message bus", "command bus", "event bus", "nette"],
+	"keywords": ["messenger", "symfony", "symfony-messenger", "message bus", "command bus", "event bus", "nette"],
 	"type": "library",
 	"license": "MIT",
 	"scripts": {
