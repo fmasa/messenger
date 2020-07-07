@@ -16,7 +16,7 @@
 	"require": {
 		"php": "^7.2",
 		"symfony/event-dispatcher": "^4.4|^5.0",
-		"symfony/messenger": "^5.0",
+		"symfony/messenger": "^5.1",
 		"nette/di": "^3.0",
 		"nette/schema": "^1.0",
 		"tracy/tracy": "^2.6"
