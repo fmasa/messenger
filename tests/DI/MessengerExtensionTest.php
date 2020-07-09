@@ -21,6 +21,7 @@ use Nette\DI\Container;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\MessageBusInterface;
+use Symfony\Component\Messenger\RoutableMessageBus;
 use Symfony\Component\Messenger\Stamp\HandledStamp;
 use Symfony\Component\Messenger\Stamp\SentStamp;
 use function array_map;
@@ -215,6 +216,18 @@ final class MessengerExtensionTest extends TestCase
             DummySerializer::class,
             $container->getByType(CustomTransportFactory::class)->getUsedSerializer()
         );
+    }
+
+    public function testBusLocatorReturnsCorrectBuses() : void
+    {
+        $container = $this->getContainer(__DIR__ . '/busLocator.neon');
+
+        $busLocator = $container->getService('messenger.busLocator');
+        assert($busLocator instanceof RoutableMessageBus);
+
+        foreach (['a', 'b', 'c'] as $busName) {
+            $this->assertSame($container->getService('messenger.' . $busName . '.bus'), $busLocator->getMessageBus($busName));
+        }
     }
 
     /**

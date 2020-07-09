@@ -30,6 +30,8 @@ final class TaggedServiceLocator implements ContainerInterface
     }
 
     /**
+     * @param string $id
+     *
      * @return object
      */
     public function get($id)
