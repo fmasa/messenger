@@ -11,6 +11,9 @@ final class TransportConfig
 {
     /** @var string */
     public $dsn;
+    
+    /** @var RetryStrategyConfig|null */
+    public $retryStrategy;
 
     /** @var mixed[] */
     public $options = [];
