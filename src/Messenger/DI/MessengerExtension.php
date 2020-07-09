@@ -182,7 +182,8 @@ class MessengerExtension extends CompilerExtension
                 ->setFactory(HandleMessageMiddleware::class, [$handlersLocator, $busConfig->allowNoHandlers]);
 
             $builder->addDefinition($this->prefix($busName . '.bus'))
-                ->setFactory(MessageBus::class, [$middleware]);
+                ->setFactory(MessageBus::class, [$middleware])
+                ->setTags([self::TAG_BUS_NAME => $busName]);
         }
     }
 

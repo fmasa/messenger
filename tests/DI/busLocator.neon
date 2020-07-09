@@ -1,0 +1,10 @@
+messenger:
+    buses:
+        a:
+        b:
+        c:
+
+services:
+    - Fixtures\CustomTransport
+    - class: Fixtures\CustomTransportFactory
+      tags: [messenger.transportFactory]
