@@ -258,17 +258,23 @@ class MessengerExtension extends CompilerExtension
             assert(is_string($transportConfig) || $transportConfig instanceof TransportConfig);
 
             if (is_string($transportConfig)) {
-                $dsn     = $transportConfig;
-                $options = [];
+                $dsn        = $transportConfig;
+                $options    = [];
+                $serializer = $defaultSerializer;
             } else {
-                $dsn     = $transportConfig->dsn;
-                $options = $transportConfig->options;
+                $dsn        = $transportConfig->dsn;
+                $options    = $transportConfig->options;
+                $serializer = $transportConfig->serializer !== null
+                    ? $builder->addDefinition($this->prefix('serializer.' . $transportName))
+                        ->setType(SerializerInterface::class)
+                        ->setFactory($transportConfig->serializer)
+                    : $defaultSerializer;
             }
 
             $transportServiceName = $this->prefix('transport.' . $transportName);
 
             $builder->addDefinition($transportServiceName)
-                ->setFactory([$transportFactory, 'createTransport'], [$dsn, $options, $defaultSerializer])
+                ->setFactory([$transportFactory, 'createTransport'], [$dsn, $options, $serializer])
                 ->setTags([
                     SendersLocator::TAG_SENDER_ALIAS => $transportName,
                     self::TAG_RECEIVER_ALIAS => $transportName,
