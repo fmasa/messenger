@@ -204,18 +204,20 @@ final class MessengerExtensionTest extends TestCase
         $this->assertSame([$message], $container->getByType(CustomTransport::class)->getSentMessages());
     }
 
-    public function testCustomDefaultSerializerIsPassedToSender() : void
+    public function testDnsAndOptionsAndCustomDefaultSerializerArePassedToSender() : void
     {
-        $container = $this->getContainer(__DIR__ . '/defaultSerializer.neon');
+        $container = $this->getContainer(__DIR__ . '/optionsPassed.neon');
 
         $bus = $container->getService('messenger.default.bus');
         assert($bus instanceof MessageBusInterface);
 
         $bus->dispatch(new Message());
-        $this->assertInstanceOf(
-            DummySerializer::class,
-            $container->getByType(CustomTransportFactory::class)->getUsedSerializer()
-        );
+
+        $transportFactory = $container->getByType(CustomTransportFactory::class);
+
+        $this->assertSame('custom://foo', $transportFactory->getUsedDns());
+        $this->assertSame(['foo' => 'bar'], $transportFactory->getUsedOptions());
+        $this->assertInstanceOf(DummySerializer::class, $transportFactory->getUsedSerializer());
     }
 
     public function testCustomSerializerIsPassedToSender() : void

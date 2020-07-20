@@ -14,6 +14,12 @@ final class CustomTransportFactory implements TransportFactoryInterface
     /** @var CustomTransport */
     private $transport;
 
+    /** @var string|null */
+    private $dns;
+
+    /** @var mixed[]|null */
+    private $options;
+
     /** @var SerializerInterface|null */
     private $serializer;
 
@@ -27,9 +33,24 @@ final class CustomTransportFactory implements TransportFactoryInterface
      */
     public function createTransport(string $dsn, array $options, SerializerInterface $serializer) : TransportInterface
     {
+        $this->dns        = $dsn;
+        $this->options    = $options;
         $this->serializer = $serializer;
 
         return $this->transport;
+    }
+
+    public function getUsedDns() : ?string
+    {
+        return $this->dns;
+    }
+
+    /**
+     * @return mixed[]
+     */
+    public function getUsedOptions() : ?array
+    {
+        return $this->options;
     }
 
     public function getUsedSerializer() : ?SerializerInterface
