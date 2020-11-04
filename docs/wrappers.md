@@ -12,18 +12,14 @@ use Symfony\Component\Messenger\Stamp\HandledStamp;
 
 final class CommandBus
 {
-    /** @var MessageBusInterface */
-    private $bus;
+    private MessageBusInterface $bus;
 
     public function __construct(MessageBusInterface $bus)
     {
         $this->bus = $bus;
     }
 
-    /**
-     * @param object $command
-     */
-    public function handle($command) : void
+    public function handle(object $command) : void
     {
         $this->bus->dispatch($command);
     }
@@ -31,8 +27,7 @@ final class CommandBus
 
 final class QueryBus
 {
-    /** @var MessageBusInterface */
-    private $bus;
+    private MessageBusInterface $bus;
 
     public function __construct(MessageBusInterface $bus)
     {
@@ -40,13 +35,11 @@ final class QueryBus
     }
 
     /**
-     * @param object $command
-     *
      * @return mixed
      */
-    public function handle($command)
+    public function handle(object $query)
     {
-        return $this->bus->dispatch($command)->last(HandledStamp::class)->getResult();
+        return $this->bus->dispatch($query)->last(HandledStamp::class)->getResult();
     }
 }
 ```
