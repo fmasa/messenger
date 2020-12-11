@@ -3,7 +3,7 @@ Fmasa/Messenger
 ![GitHub Workflow Status](https://img.shields.io/github/workflow/status/fmasa/messenger/main)
 [![Coverage Status](https://coveralls.io/repos/github/fmasa/messenger/badge.svg?branch=master)](https://coveralls.io/github/fmasa/messenger?branch=master)
 
-PHP 7.1+ integration of [Symfony/Messenger](https://symfony.com/doc/current/messenger.html) to Nette Framework
+PHP 7.4+ integration of [Symfony/Messenger](https://symfony.com/doc/current/messenger.html) to Nette Framework
 
 ## Installation
 

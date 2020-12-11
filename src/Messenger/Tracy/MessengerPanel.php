@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Fmasa\Messenger\Tracy;
 
 use Tracy\IBarPanel;
+
 use function array_filter;
 use function array_map;
 use function count;
@@ -16,7 +17,7 @@ use function ob_start;
 final class MessengerPanel implements IBarPanel
 {
     /** @var LogToPanelMiddleware[] */
-    private $middlewares;
+    private array $middlewares;
 
     /**
      * @param LogToPanelMiddleware[] $middlewares
@@ -26,13 +27,13 @@ final class MessengerPanel implements IBarPanel
         $this->middlewares = $middlewares;
     }
 
-    public function getTab() : string
+    public function getTab(): string
     {
         $counter = implode(
             '+',
             array_filter(
                 array_map(
-                    static function (LogToPanelMiddleware $middleware) : int {
+                    static function (LogToPanelMiddleware $middleware): int {
                         return count($middleware->getHandledMessages());
                     },
                     $this->middlewares
@@ -43,10 +44,10 @@ final class MessengerPanel implements IBarPanel
         return file_get_contents(__DIR__ . '/icon.svg') . $counter . ' messages ';
     }
 
-    public function getPanel() : string
+    public function getPanel(): string
     {
         $buses = array_map(
-            function (LogToPanelMiddleware $middleware) : string {
+            function (LogToPanelMiddleware $middleware): string {
                 return $this->renderBus($middleware);
             },
             $this->middlewares
@@ -59,7 +60,7 @@ final class MessengerPanel implements IBarPanel
         return (string) ob_get_clean();
     }
 
-    private function renderBus(LogToPanelMiddleware $middleware) : string
+    private function renderBus(LogToPanelMiddleware $middleware): string
     {
         $busName         = $middleware->getBusName();
         $handledMessages = $middleware->getHandledMessages();
@@ -72,7 +73,7 @@ final class MessengerPanel implements IBarPanel
         return (string) ob_get_clean();
     }
 
-    private function getIcon() : string
+    private function getIcon(): string
     {
         return (string) file_get_contents(__DIR__ . '/icon.svg');
     }

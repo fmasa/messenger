@@ -6,7 +6,7 @@ namespace Fixtures;
 
 final class HandlerWithInvalidArgumentType
 {
-    public function __invoke(int $message) : void
+    public function __invoke(int $message): void
     {
     }
 }

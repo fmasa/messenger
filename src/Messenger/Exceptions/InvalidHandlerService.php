@@ -7,11 +7,12 @@ namespace Fmasa\Messenger\Exceptions;
 use Exception;
 use ReflectionNamedType;
 use ReflectionType;
+
 use function sprintf;
 
 final class InvalidHandlerService extends Exception
 {
-    public static function missingInvokeMethod(string $serviceName, string $className) : self
+    public static function missingInvokeMethod(string $serviceName, string $className): self
     {
         return new self(sprintf(
             'Invalid handler service "%s": class "%s" must have an "__invoke()" method.',
@@ -20,7 +21,7 @@ final class InvalidHandlerService extends Exception
         ));
     }
 
-    public static function missingArgumentType(string $serviceName, string $className, string $parameterName) : self
+    public static function missingArgumentType(string $serviceName, string $className, string $parameterName): self
     {
         return new self(sprintf(
             'Invalid handler service "%s": argument "$%s" of method "%s::__invoke()"'
@@ -31,7 +32,7 @@ final class InvalidHandlerService extends Exception
         ));
     }
 
-    public static function wrongAmountOfArguments(string $serviceName, string $className) : self
+    public static function wrongAmountOfArguments(string $serviceName, string $className): self
     {
         return new self(sprintf(
             'Invalid handler service "%s": method "%s::__invoke()" requires exactly one argument,'
@@ -46,7 +47,7 @@ final class InvalidHandlerService extends Exception
         string $className,
         string $parameterName,
         ReflectionType $type
-    ) : self {
+    ): self {
         return new self(sprintf(
             'Invalid handler service "%s": type-hint of argument "$%s"'
             . ' in method "%s::__invoke()" must be a class , "%s" given.',

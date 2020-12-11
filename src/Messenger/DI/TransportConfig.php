@@ -13,14 +13,10 @@ use Nette\DI\Definitions\Statement;
  */
 final class TransportConfig
 {
-    /** @var string */
-    public $dsn;
+    public string $dsn;
 
-    /**
-     * @var array
-     * @phpstan-var mixed[]
-     */
-    public $options = [];
+    /** @var array<string, mixed> */
+    public array $options = [];
 
     /**
      * Service/class used as serializer for given transport. When null is passed, default serializer will be used.

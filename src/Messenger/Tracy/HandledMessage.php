@@ -6,17 +6,13 @@ namespace Fmasa\Messenger\Tracy;
 
 final class HandledMessage
 {
-    /** @var string */
-    private $messageName;
+    private string $messageName;
 
-    /** @var float */
-    private $timeInMs;
+    private float $timeInMs;
 
-    /** @var string */
-    private $messageDump;
+    private string $messageDump;
 
-    /** @var string */
-    private $resultDump;
+    private string $resultDump;
 
     public function __construct(string $messageName, float $timeInMs, string $messageDump, string $resultDump)
     {
@@ -26,22 +22,22 @@ final class HandledMessage
         $this->resultDump  = $resultDump;
     }
 
-    public function getMessageName() : string
+    public function getMessageName(): string
     {
         return $this->messageName;
     }
 
-    public function getTimeInMs() : float
+    public function getTimeInMs(): float
     {
         return $this->timeInMs;
     }
 
-    public function getMessageDump() : string
+    public function getMessageDump(): string
     {
         return $this->messageDump;
     }
 
-    public function getResultDump() : string
+    public function getResultDump(): string
     {
         return $this->resultDump;
     }

@@ -6,7 +6,7 @@ namespace Fixtures;
 
 final class HandlerWithoutArguments
 {
-    public function __invoke() : void
+    public function __invoke(): void
     {
     }
 }

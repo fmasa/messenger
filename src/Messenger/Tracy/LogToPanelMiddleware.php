@@ -9,6 +9,7 @@ use Symfony\Component\Messenger\Middleware\MiddlewareInterface;
 use Symfony\Component\Messenger\Middleware\StackInterface;
 use Symfony\Component\Messenger\Stamp\HandledStamp;
 use Tracy\Debugger;
+
 use function array_map;
 use function count;
 use function explode;
@@ -19,18 +20,17 @@ use function round;
 
 final class LogToPanelMiddleware implements MiddlewareInterface
 {
-    /** @var string */
-    private $busName;
+    private string $busName;
 
     /** @var HandledMessage[] */
-    private $handledMessages = [];
+    private array $handledMessages = [];
 
     public function __construct(string $busName)
     {
         $this->busName = $busName;
     }
 
-    public function handle(Envelope $envelope, StackInterface $stack) : Envelope
+    public function handle(Envelope $envelope, StackInterface $stack): Envelope
     {
         $time = microtime(true);
 
@@ -45,7 +45,7 @@ final class LogToPanelMiddleware implements MiddlewareInterface
             implode(
                 "\n",
                 array_map(
-                    static function (HandledStamp $stamp) : string {
+                    static function (HandledStamp $stamp): string {
                         return Debugger::dump($stamp->getResult(), true);
                     },
                     $result->all(HandledStamp::class)
@@ -56,7 +56,7 @@ final class LogToPanelMiddleware implements MiddlewareInterface
         return $result;
     }
 
-    public function getBusName() : string
+    public function getBusName(): string
     {
         return $this->busName;
     }
@@ -64,12 +64,12 @@ final class LogToPanelMiddleware implements MiddlewareInterface
     /**
      * @return HandledMessage[]
      */
-    public function getHandledMessages() : array
+    public function getHandledMessages(): array
     {
         return $this->handledMessages;
     }
 
-    private function getMessageName(Envelope $envelope) : string
+    private function getMessageName(Envelope $envelope): string
     {
         $nameParts = explode('\\', get_class($envelope->getMessage()));
 

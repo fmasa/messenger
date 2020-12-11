@@ -6,25 +6,23 @@ namespace Fixtures;
 
 class Handler
 {
-    /** @var bool */
-    private $called = false;
+    private bool $called = false;
 
-    /** @var string|null */
-    private $result;
+    private ?string $result = null;
 
     public function __construct(?string $result = null)
     {
         $this->result = $result;
     }
 
-    public function __invoke(Message $message) : ?string
+    public function __invoke(Message $message): ?string
     {
         $this->called = true;
 
         return $this->result;
     }
 
-    public function isCalled() : bool
+    public function isCalled(): bool
     {
         return $this->called;
     }

@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        php-versions: ['7.2', '7.3', '7.4']
+        php-versions: ['7.4', '8.0']
         composer-flags: ['', '--prefer-lowest --prefer-stable']
     name: PHP ${{ matrix.php-versions }} tests | ${{ matrix.composer-flags }}
     steps:
@@ -48,7 +48,7 @@ jobs:
       - name: Install PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: 7.4
+          php-version: 8.0
           coverage: xdebug
 
       - name: Cache/Restore dependencies
@@ -57,8 +57,8 @@ jobs:
           path: |
             ~/.composer/cache
             vendor
-          key: php-7.4
-          restore-keys: php-7.4
+          key: php-8.0
+          restore-keys: php-8.0
 
       - name: Install Dependencies
         run: composer update --no-interaction --prefer-dist
@@ -83,7 +83,7 @@ jobs:
       - name: Install PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: 7.4
+          php-version: 8.0
 
       - name: Cache/Restore dependencies
         uses: actions/cache@v2
@@ -91,8 +91,8 @@ jobs:
           path: |
             ~/.composer/cache
             vendor
-          key: php-7.4
-          restore-keys: php-7.4
+          key: php-8.0
+          restore-keys: php-8.0
 
       - name: Install Dependencies
         run: composer update --no-interaction --prefer-dist
@@ -110,7 +110,7 @@ jobs:
       - name: Install PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: 7.4
+          php-version: 8.0
 
       - name: Cache/Restore dependencies
         uses: actions/cache@v2
@@ -118,8 +118,8 @@ jobs:
           path: |
             ~/.composer/cache
             vendor
-          key: php-7.4
-          restore-keys: php-7.4
+          key: php-8.0
+          restore-keys: php-8.0
 
       - name: Install Dependencies
         run: composer update --no-interaction --prefer-dist
