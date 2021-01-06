@@ -22,8 +22,8 @@ final class MessageTypeResolver
         $class = get_class($envelope->getMessage());
 
         return [$class => $class]
-            + class_parents($class)
-            + class_implements($class)
+            + (class_parents($class) ?: [])
+            + (class_implements($class) ?: [])
             + ['*' => '*'];
     }
 }
