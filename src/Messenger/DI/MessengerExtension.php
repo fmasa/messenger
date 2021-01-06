@@ -36,6 +36,7 @@ use Symfony\Component\Messenger\RoutableMessageBus;
 use Symfony\Component\Messenger\Transport\InMemoryTransportFactory;
 use Symfony\Component\Messenger\Transport\Serialization\SerializerInterface;
 use Symfony\Component\Messenger\Transport\TransportFactory;
+
 use function array_filter;
 use function array_keys;
 use function array_map;
@@ -63,7 +64,7 @@ class MessengerExtension extends CompilerExtension
         'redis' => RedisTransportFactory::class,
     ];
 
-    public function getConfigSchema() : Schema
+    public function getConfigSchema(): Schema
     {
         return Expect::structure([
             'serializer' => Expect::from(new SerializerConfig()),
@@ -78,7 +79,7 @@ class MessengerExtension extends CompilerExtension
         ]);
     }
 
-    public function loadConfiguration() : void
+    public function loadConfiguration(): void
     {
         $builder = $this->getContainerBuilder();
 
@@ -100,7 +101,7 @@ class MessengerExtension extends CompilerExtension
      * @throws InvalidHandlerService
      * @throws MultipleHandlersFound
      */
-    public function beforeCompile() : void
+    public function beforeCompile(): void
     {
         $config  = $this->getConfig();
         $builder = $this->getContainerBuilder();
@@ -144,7 +145,7 @@ class MessengerExtension extends CompilerExtension
         $this->passRegisteredTransportFactoriesToMainFactory();
     }
 
-    public function afterCompile(ClassType $class) : void
+    public function afterCompile(ClassType $class): void
     {
         if (! $this->isPanelEnabled()) {
             return;
@@ -153,7 +154,7 @@ class MessengerExtension extends CompilerExtension
         $this->enableTracyIntegration($class);
     }
 
-    private function processBuses() : void
+    private function processBuses(): void
     {
         $builder = $this->getContainerBuilder();
 
@@ -190,7 +191,7 @@ class MessengerExtension extends CompilerExtension
     /**
      * @return Statement[]
      */
-    private function getSubscribers() : array
+    private function getSubscribers(): array
     {
         return [
             new Statement(DispatchPcntlSignalListener::class),
@@ -207,7 +208,7 @@ class MessengerExtension extends CompilerExtension
         ];
     }
 
-    private function processConsoleCommands() : void
+    private function processConsoleCommands(): void
     {
         $builder = $this->getContainerBuilder();
 
@@ -234,7 +235,7 @@ class MessengerExtension extends CompilerExtension
             ->setFactory(ConsumeMessagesCommand::class, [$routableBus, $receiverLocator, $eventDispatcher]);
     }
 
-    private function processTransports() : void
+    private function processTransports(): void
     {
         $builder = $this->getContainerBuilder();
 
@@ -282,14 +283,14 @@ class MessengerExtension extends CompilerExtension
         }
     }
 
-    private function processRouting() : void
+    private function processRouting(): void
     {
         $this->getContainerBuilder()->addDefinition($this->prefix('sendersLocator'))
             ->setFactory(
                 SendersLocator::class,
                 [
                     array_map(
-                        static function ($oneOrManyTransports) : array {
+                        static function ($oneOrManyTransports): array {
                                 return is_string($oneOrManyTransports) ? [$oneOrManyTransports] : $oneOrManyTransports;
                         },
                         $this->getConfig()->routing
@@ -301,7 +302,7 @@ class MessengerExtension extends CompilerExtension
     /**
      * @return string[] Service names
      */
-    private function getHandlersForBus(string $busName) : array
+    private function getHandlersForBus(string $busName): array
     {
         $builder = $this->getContainerBuilder();
 
@@ -315,7 +316,7 @@ class MessengerExtension extends CompilerExtension
 
         return array_filter(
             $serviceNames,
-            static function (string $serviceName) use ($builder, $busName) : bool {
+            static function (string $serviceName) use ($builder, $busName): bool {
                 $definition = $builder->getDefinition($serviceName);
 
                 return ($definition->getTag(self::TAG_HANDLER)['bus'] ?? $busName) === $busName;
@@ -328,7 +329,7 @@ class MessengerExtension extends CompilerExtension
      *
      * @throws InvalidHandlerService
      */
-    private function getHandledMessageNames(string $serviceName) : iterable
+    private function getHandledMessageNames(string $serviceName): iterable
     {
         $handlerClassName = $this->getContainerBuilder()->getDefinition($serviceName)->getType();
         assert(is_string($handlerClassName));
@@ -365,7 +366,7 @@ class MessengerExtension extends CompilerExtension
         return [$type->getName()];
     }
 
-    private function enableTracyIntegration(ClassType $class) : void
+    private function enableTracyIntegration(ClassType $class): void
     {
         $class->getMethod('initialize')->addBody($this->getContainerBuilder()->formatPhp('?;', [
             new Statement(
@@ -375,12 +376,12 @@ class MessengerExtension extends CompilerExtension
         ]));
     }
 
-    private function isPanelEnabled() : bool
+    private function isPanelEnabled(): bool
     {
         return $this->getContainerBuilder()->findByType(LogToPanelMiddleware::class) !== [];
     }
 
-    private function passRegisteredTransportFactoriesToMainFactory() : void
+    private function passRegisteredTransportFactoriesToMainFactory(): void
     {
         $builder = $this->getContainerBuilder();
 

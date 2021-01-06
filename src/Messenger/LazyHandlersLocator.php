@@ -8,6 +8,7 @@ use Nette\DI\Container;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\Handler\HandlerDescriptor;
 use Symfony\Component\Messenger\Handler\HandlersLocatorInterface;
+
 use function assert;
 use function get_class;
 use function is_callable;
@@ -18,10 +19,9 @@ use function is_callable;
 final class LazyHandlersLocator implements HandlersLocatorInterface
 {
     /** @var array<string, array<string, string|null>> message type => [handler service name => alias] */
-    private $handlersMap;
+    private array $handlersMap;
 
-    /** @var Container */
-    private $container;
+    private Container $container;
 
     /**
      * @param array<string, array<string, string|null>> $handlersMap
@@ -35,7 +35,7 @@ final class LazyHandlersLocator implements HandlersLocatorInterface
     /**
      * @return HandlerDescriptor[]
      */
-    public function getHandlers(Envelope $envelope) : iterable
+    public function getHandlers(Envelope $envelope): iterable
     {
         $handlers = [];
 

@@ -6,7 +6,7 @@ namespace Fixtures;
 
 final class FixedHandler
 {
-    public function __invoke(Message $message, bool $optionalArgument = true) : string
+    public function __invoke(Message $message, bool $optionalArgument = true): string
     {
         return 'fixed result';
     }

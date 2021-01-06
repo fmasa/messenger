@@ -24,6 +24,7 @@ use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\Messenger\RoutableMessageBus;
 use Symfony\Component\Messenger\Stamp\HandledStamp;
 use Symfony\Component\Messenger\Stamp\SentStamp;
+
 use function array_map;
 use function assert;
 use function mkdir;
@@ -32,7 +33,7 @@ use function uniqid;
 
 final class MessengerExtensionTest extends TestCase
 {
-    public function testAddingMiddleware() : void
+    public function testAddingMiddleware(): void
     {
         $container = $this->getContainer(__DIR__ . '/middlewares.neon');
 
@@ -48,7 +49,7 @@ final class MessengerExtensionTest extends TestCase
         $this->assertSame('second', $stamps[1]->getValue());
     }
 
-    public function testExceptionIsThrownIfThereAreMultipleHandlersWhenSingleHandlerPerMessageIsTrue() : void
+    public function testExceptionIsThrownIfThereAreMultipleHandlersWhenSingleHandlerPerMessageIsTrue(): void
     {
         $this->expectException(MultipleHandlersFound::class);
 
@@ -60,7 +61,7 @@ final class MessengerExtensionTest extends TestCase
      *
      * @dataProvider dataMultipleHandlers
      */
-    public function testMultipleHandlersAreCalled(string $configFiles, array $expectedResults) : void
+    public function testMultipleHandlersAreCalled(string $configFiles, array $expectedResults): void
     {
         $container = $this->getContainer($configFiles);
 
@@ -76,7 +77,7 @@ final class MessengerExtensionTest extends TestCase
     /**
      * @return (string|string[])[][]
      */
-    public static function dataMultipleHandlers() : array
+    public static function dataMultipleHandlers(): array
     {
         return [
             [__DIR__ . '/multipleHandlers.neon', ['first result', 'second result', 'fixed result']],
@@ -85,7 +86,7 @@ final class MessengerExtensionTest extends TestCase
         ];
     }
 
-    public function testHandlersRestrictedToCertainBus() : void
+    public function testHandlersRestrictedToCertainBus(): void
     {
         $container = $this->getContainer(__DIR__ . '/restrictedHandlers.neon');
 
@@ -100,7 +101,7 @@ final class MessengerExtensionTest extends TestCase
     /**
      * @dataProvider dataInvalidHandlerConfigs
      */
-    public function testInvalidHandlersThrowException(string $configFile) : void
+    public function testInvalidHandlersThrowException(string $configFile): void
     {
         $this->expectException(InvalidHandlerService::class);
 
@@ -110,7 +111,7 @@ final class MessengerExtensionTest extends TestCase
     /**
      * @return string[][]
      */
-    public function dataInvalidHandlerConfigs() : array
+    public function dataInvalidHandlerConfigs(): array
     {
         return [
             [__DIR__ . '/invalidHandler.invalidArgumentType.neon'],
@@ -121,7 +122,7 @@ final class MessengerExtensionTest extends TestCase
         ];
     }
 
-    public function testTracyPanel() : void
+    public function testTracyPanel(): void
     {
         $container = $this->getContainer(__DIR__ . '/twoBusesWithTracy.neon');
 
@@ -140,7 +141,7 @@ final class MessengerExtensionTest extends TestCase
         $this->assertRegExp('~Handled messages~', $panel->getPanel());
     }
 
-    public function testLogToPanelMiddlewareIsNotRegisteredIfPanelIsDisabled() : void
+    public function testLogToPanelMiddlewareIsNotRegisteredIfPanelIsDisabled(): void
     {
         $container = $this->getContainer(__DIR__ . '/withoutPanel.neon');
 
@@ -153,7 +154,7 @@ final class MessengerExtensionTest extends TestCase
      *
      * @dataProvider dataMessagedRoutedToMemoryTransport
      */
-    public function testMessageIsPassedToTransport($message, array $transports) : void
+    public function testMessageIsPassedToTransport($message, array $transports): void
     {
         $container = $this->getContainer(__DIR__ . '/transports.neon');
 
@@ -163,7 +164,7 @@ final class MessengerExtensionTest extends TestCase
         $this->assertSame(
             $transports,
             array_map(
-                static function (SentStamp $stamp) : string {
+                static function (SentStamp $stamp): string {
                     return $stamp->getSenderAlias();
                 },
                 $bus->dispatch($message)->all(SentStamp::class)
@@ -174,20 +175,20 @@ final class MessengerExtensionTest extends TestCase
     /**
      * @return mixed[]
      */
-    public static function dataMessagedRoutedToMemoryTransport() : array
+    public static function dataMessagedRoutedToMemoryTransport(): array
     {
         return [
             'message routed to one transport' => [new Message(), ['memory1']],
             'message routed to one transport (set as array)' => [new Message2(), ['memory1']],
             'message routed to two transports' => [new Message3(), ['memory1', 'memory2']],
-            'message routed to two transports (to first via interface, to second via class name)'=> [
+            'message routed to two transports (to first via interface, to second via class name)' => [
                 new MessageImplementingInterface(),
                 ['memory2', 'memory1'],
             ],
         ];
     }
 
-    public function testRegisterCustomTransport() : void
+    public function testRegisterCustomTransport(): void
     {
         $container = $this->getContainer(__DIR__ . '/customTransport.neon');
 
@@ -204,7 +205,7 @@ final class MessengerExtensionTest extends TestCase
         $this->assertSame([$message], $container->getByType(CustomTransport::class)->getSentMessages());
     }
 
-    public function testDnsAndOptionsAndCustomDefaultSerializerArePassedToSender() : void
+    public function testDnsAndOptionsAndCustomDefaultSerializerArePassedToSender(): void
     {
         $container = $this->getContainer(__DIR__ . '/optionsPassed.neon');
 
@@ -220,7 +221,7 @@ final class MessengerExtensionTest extends TestCase
         $this->assertInstanceOf(DummySerializer::class, $transportFactory->getUsedSerializer());
     }
 
-    public function testCustomSerializerIsPassedToSender() : void
+    public function testCustomSerializerIsPassedToSender(): void
     {
         $container = $this->getContainer(__DIR__ . '/customSerializer.neon');
 
@@ -234,7 +235,7 @@ final class MessengerExtensionTest extends TestCase
         );
     }
 
-    public function testBusLocatorReturnsCorrectBuses() : void
+    public function testBusLocatorReturnsCorrectBuses(): void
     {
         $container = $this->getContainer(__DIR__ . '/busLocator.neon');
 
@@ -249,14 +250,14 @@ final class MessengerExtensionTest extends TestCase
     /**
      * @param string[] $expectedResults
      */
-    private function assertResultsAreSame(array $expectedResults, Envelope $envelope) : void
+    private function assertResultsAreSame(array $expectedResults, Envelope $envelope): void
     {
         $stamps = $envelope->all(HandledStamp::class);
 
         $this->assertSame(
             $expectedResults,
             array_map(
-                static function (HandledStamp $stamp) : string {
+                static function (HandledStamp $stamp): string {
                     return $stamp->getResult();
                 },
                 $stamps
@@ -264,7 +265,7 @@ final class MessengerExtensionTest extends TestCase
         );
     }
 
-    private function getContainer(string $configFile) : Container
+    private function getContainer(string $configFile): Container
     {
         $tempDir = sys_get_temp_dir() . '/' . uniqid('MessengerExtensionTest', true);
         mkdir($tempDir);

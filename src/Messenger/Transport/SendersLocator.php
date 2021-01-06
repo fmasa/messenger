@@ -10,6 +10,7 @@ use Nette\DI\Container;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\Transport\Sender\SenderInterface;
 use Symfony\Component\Messenger\Transport\Sender\SendersLocatorInterface;
+
 use function assert;
 
 final class SendersLocator implements SendersLocatorInterface
@@ -17,10 +18,9 @@ final class SendersLocator implements SendersLocatorInterface
     public const TAG_SENDER_ALIAS = 'messenger.sender.alias';
 
     /** @var array<string, string[]> */
-    private $messageTypeToSender;
+    private array $messageTypeToSender;
 
-    /** @var Container */
-    private $container;
+    private Container $container;
 
     /**
      * @param array<string, string[]> $messageTypeToSenders
@@ -34,7 +34,7 @@ final class SendersLocator implements SendersLocatorInterface
     /**
      * @inheritDoc
      */
-    public function getSenders(Envelope $envelope) : iterable
+    public function getSenders(Envelope $envelope): iterable
     {
         foreach (MessageTypeResolver::listTypes($envelope) as $type) {
             foreach ($this->messageTypeToSender[$type] ?? [] as $alias) {
@@ -43,10 +43,7 @@ final class SendersLocator implements SendersLocatorInterface
         }
     }
 
-    /**
-     * @inheritDoc
-     */
-    private function getSenderByAlias(string $alias) : SenderInterface
+    private function getSenderByAlias(string $alias): SenderInterface
     {
         foreach ($this->container->findByTag(self::TAG_SENDER_ALIAS) as $serviceName => $serviceAlias) {
             if ($serviceAlias !== $alias) {

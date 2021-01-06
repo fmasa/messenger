@@ -10,25 +10,25 @@ use Symfony\Component\Messenger\Transport\TransportInterface;
 final class CustomTransport implements TransportInterface
 {
     /** @var object[] */
-    private $sentMessages = [];
+    private array $sentMessages = [];
 
     /**
      * @return Envelope[]
      */
-    public function get() : iterable
+    public function get(): iterable
     {
         return [];
     }
 
-    public function ack(Envelope $envelope) : void
+    public function ack(Envelope $envelope): void
     {
     }
 
-    public function reject(Envelope $envelope) : void
+    public function reject(Envelope $envelope): void
     {
     }
 
-    public function send(Envelope $envelope) : Envelope
+    public function send(Envelope $envelope): Envelope
     {
         $this->sentMessages[] = $envelope->getMessage();
 
@@ -38,7 +38,7 @@ final class CustomTransport implements TransportInterface
     /**
      * @return Envelope[]
      */
-    public function getSentMessages() : array
+    public function getSentMessages(): array
     {
         return $this->sentMessages;
     }

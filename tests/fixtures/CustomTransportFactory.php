@@ -7,21 +7,19 @@ namespace Fixtures;
 use Symfony\Component\Messenger\Transport\Serialization\SerializerInterface;
 use Symfony\Component\Messenger\Transport\TransportFactoryInterface;
 use Symfony\Component\Messenger\Transport\TransportInterface;
+
 use function strpos;
 
 final class CustomTransportFactory implements TransportFactoryInterface
 {
-    /** @var CustomTransport */
-    private $transport;
+    private CustomTransport $transport;
 
-    /** @var string|null */
-    private $dns;
+    private ?string $dns = null;
 
     /** @var mixed[]|null */
-    private $options;
+    private ?array $options = null;
 
-    /** @var SerializerInterface|null */
-    private $serializer;
+    private ?SerializerInterface $serializer = null;
 
     public function __construct(CustomTransport $transport)
     {
@@ -31,7 +29,7 @@ final class CustomTransportFactory implements TransportFactoryInterface
     /**
      * @param mixed[] $options
      */
-    public function createTransport(string $dsn, array $options, SerializerInterface $serializer) : TransportInterface
+    public function createTransport(string $dsn, array $options, SerializerInterface $serializer): TransportInterface
     {
         $this->dns        = $dsn;
         $this->options    = $options;
@@ -40,7 +38,7 @@ final class CustomTransportFactory implements TransportFactoryInterface
         return $this->transport;
     }
 
-    public function getUsedDns() : ?string
+    public function getUsedDns(): ?string
     {
         return $this->dns;
     }
@@ -48,12 +46,12 @@ final class CustomTransportFactory implements TransportFactoryInterface
     /**
      * @return mixed[]
      */
-    public function getUsedOptions() : ?array
+    public function getUsedOptions(): ?array
     {
         return $this->options;
     }
 
-    public function getUsedSerializer() : ?SerializerInterface
+    public function getUsedSerializer(): ?SerializerInterface
     {
         return $this->serializer;
     }
@@ -61,7 +59,7 @@ final class CustomTransportFactory implements TransportFactoryInterface
     /**
      * @param mixed[] $options
      */
-    public function supports(string $dsn, array $options) : bool
+    public function supports(string $dsn, array $options): bool
     {
         return strpos($dsn, 'custom://') === 0;
     }

@@ -11,15 +11,14 @@ use Symfony\Component\Messenger\Stamp\StampInterface;
 
 final class StampAddingMiddleware implements MiddlewareInterface
 {
-    /** @var StampInterface */
-    private $stamp;
+    private StampInterface $stamp;
 
     public function __construct(StampInterface $stamp)
     {
         $this->stamp = $stamp;
     }
 
-    public function handle(Envelope $envelope, StackInterface $stack) : Envelope
+    public function handle(Envelope $envelope, StackInterface $stack): Envelope
     {
         return $stack->next()->handle($envelope->with($this->stamp), $stack);
     }

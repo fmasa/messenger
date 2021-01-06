@@ -11,15 +11,12 @@ use Nette\DI\Statement;
  */
 final class BusConfig
 {
-    /** @var bool */
-    public $allowNoHandlers = false;
+    public bool $allowNoHandlers = false;
 
-    /** @var bool */
-    public $singleHandlerPerMessage = false;
+    public bool $singleHandlerPerMessage = false;
 
     /** @var Statement[] */
-    public $middleware = [];
+    public array $middleware = [];
 
-    /** @var bool */
-    public $panel = true;
+    public bool $panel = true;
 }

@@ -14,21 +14,21 @@
 		"stan": "vendor/bin/phpstan analyse --level 7 src"
 	},
 	"require": {
-		"php": "^7.2",
+		"php": "^7.4 || ^8.0",
 		"psr/container": "^1.0",
 		"symfony/event-dispatcher": "^4.4|^5.0",
 		"symfony/messenger": "^5.1",
+		"symfony/console": "^4.4|^5.0",
 		"nette/di": "^3.0.1",
-		"nette/schema": "^1.0",
+		"nette/schema": "^1.0.3",
 		"tracy/tracy": "^2.6"
 	},
 	"require-dev": {
 		"mockery/mockery": "^1.2",
-		"phpunit/phpunit": "^6.5",
-		"phpunit/phpcov": "^4.0",
+		"phpunit/phpunit": "^9.5",
 		"nette/bootstrap": "^3.0",
 		"phpstan/phpstan": "^0.12",
-		"doctrine/coding-standard": "^6.0"
+		"doctrine/coding-standard": "^8.1"
 	},
 	"authors": [
 		{

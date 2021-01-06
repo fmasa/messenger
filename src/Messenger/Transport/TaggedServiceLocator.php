@@ -9,18 +9,15 @@ use Nette\DI\Container;
 use Psr\Container\ContainerInterface;
 
 // ContainerInterface does not use typehints, so we cannot add them without breaking LSP
-// phpcs:disable SlevomatCodingStandard.TypeHints.TypeHintDeclaration
+// phpcs:disable SlevomatCodingStandard.TypeHints.ParameterTypeHint
 
 final class TaggedServiceLocator implements ContainerInterface
 {
-    /** @var string */
-    private $tagName;
+    private string $tagName;
 
-    /** @var Container */
-    private $container;
+    private Container $container;
 
-    /** @var string|null */
-    private $defaultServiceName;
+    private ?string $defaultServiceName = null;
 
     public function __construct(string $tagName, Container $container, ?string $defaultServiceName = null)
     {
@@ -30,11 +27,9 @@ final class TaggedServiceLocator implements ContainerInterface
     }
 
     /**
-     * @param string $id
-     *
-     * @return object
+     * @var string $id
      */
-    public function get($id)
+    public function get($id): object
     {
         foreach ($this->container->findByTag($this->tagName) as $serviceName => $receiverName) {
             if ($receiverName === $id) {
@@ -50,9 +45,9 @@ final class TaggedServiceLocator implements ContainerInterface
     }
 
     /**
-     * @param string $id
+     * @var string $id
      */
-    public function has($id) : bool
+    public function has($id): bool
     {
         foreach ($this->container->findByTag($this->tagName) as $receiverName) {
             if ($receiverName === $id) {

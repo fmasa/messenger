@@ -6,7 +6,7 @@ namespace Fixtures;
 
 final class HandlerWithTooManyArguments
 {
-    public function __invoke(Message $first, Message $second) : void
+    public function __invoke(Message $first, Message $second): void
     {
     }
 }
