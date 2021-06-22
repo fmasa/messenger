@@ -55,6 +55,6 @@ final class TaggedServiceLocator implements ContainerInterface
             }
         }
 
-        return $this->defaultServiceName === null;
+        return $this->defaultServiceName !== null;
     }
 }
