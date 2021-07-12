@@ -26,6 +26,7 @@ use Symfony\Component\Messenger\Bridge\Redis\Transport\RedisTransportFactory;
 use Symfony\Component\Messenger\Command\ConsumeMessagesCommand;
 use Symfony\Component\Messenger\EventListener\DispatchPcntlSignalListener;
 use Symfony\Component\Messenger\EventListener\SendFailedMessageForRetryListener;
+use Symfony\Component\Messenger\EventListener\SendFailedMessageToFailureTransportListener;
 use Symfony\Component\Messenger\EventListener\StopWorkerOnSigtermSignalListener;
 use Symfony\Component\Messenger\Handler\MessageHandlerInterface;
 use Symfony\Component\Messenger\Handler\MessageSubscriberInterface;
@@ -53,6 +54,7 @@ class MessengerExtension extends CompilerExtension
     private const TAG_RECEIVER_ALIAS    = 'messenger.receiver.alias';
     private const TAG_BUS_NAME          = 'messenger.bus.name';
     private const TAG_RETRY_STRATEGY    = 'messenger.retryStrategy';
+    private const TAG_FAILURE_TRANSPORT = 'messenger.failureTransport';
 
     private const HANDLERS_LOCATOR_SERVICE_NAME = '.handlersLocator';
     private const PANEL_MIDDLEWARE_SERVICE_NAME = '.middleware.panel';
@@ -73,6 +75,7 @@ class MessengerExtension extends CompilerExtension
                 Expect::string(),
                 Expect::from(new TransportConfig())
             )),
+            'failureTransport' => Expect::string()->nullable(),
             'routing' => Expect::arrayOf(
                 Expect::anyOf(Expect::string(), Expect::listOf(Expect::string()))
             ),
@@ -202,8 +205,10 @@ class MessengerExtension extends CompilerExtension
                     new Statement(TaggedServiceLocator::class, [self::TAG_RETRY_STRATEGY]),
                 ]
             ),
-            // TODO: Add support for failed transport
-            // new Statement(SendFailedMessageToFailureTransportListener::class),
+            new Statement(
+                SendFailedMessageToFailureTransportListener::class,
+                [new Statement(TaggedServiceLocator::class, [self::TAG_FAILURE_TRANSPORT])]
+            ),
             new Statement(StopWorkerOnSigtermSignalListener::class),
         ];
     }
@@ -255,8 +260,15 @@ class MessengerExtension extends CompilerExtension
             ->setType(SerializerInterface::class)
             ->setFactory($serializerConfig->defaultSerializer);
 
+        $failureTransports = [];
+
         foreach ($this->getConfig()->transports as $transportName => $transportConfig) {
             assert(is_string($transportConfig) || $transportConfig instanceof TransportConfig);
+
+            $failureTransportName = $transportConfig->failureTransport ?? $this->getConfig()->failureTransport;
+            if ($failureTransportName !== null) {
+                $failureTransports[$failureTransportName][] = $transportName;
+            }
 
             if (is_string($transportConfig)) {
                 $dsn        = $transportConfig;
@@ -280,6 +292,11 @@ class MessengerExtension extends CompilerExtension
                     SendersLocator::TAG_SENDER_ALIAS => $transportName,
                     self::TAG_RECEIVER_ALIAS => $transportName,
                 ]);
+        }
+
+        foreach ($failureTransports as $failureTransportName => $transportNames) {
+            $builder->getDefinition($this->prefix('transport.' . $failureTransportName))
+                ->addTag(self::TAG_FAILURE_TRANSPORT, $transportNames);
         }
     }
 

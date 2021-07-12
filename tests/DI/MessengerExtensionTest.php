@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Fmasa\Messenger\DI;
 
+use Exception;
 use Fixtures\CustomTransport;
 use Fixtures\CustomTransportFactory;
 use Fixtures\DummySerializer;
@@ -19,11 +20,15 @@ use Fmasa\Messenger\Tracy\MessengerPanel;
 use Nette\Configurator;
 use Nette\DI\Container;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\EventDispatcher\EventDispatcher;
 use Symfony\Component\Messenger\Envelope;
+use Symfony\Component\Messenger\Event\WorkerMessageFailedEvent;
 use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\Messenger\RoutableMessageBus;
 use Symfony\Component\Messenger\Stamp\HandledStamp;
 use Symfony\Component\Messenger\Stamp\SentStamp;
+use Symfony\Component\Messenger\Stamp\SentToFailureTransportStamp;
+use Symfony\Component\Messenger\Transport\InMemoryTransport;
 
 use function array_map;
 use function assert;
@@ -245,6 +250,46 @@ final class MessengerExtensionTest extends TestCase
         foreach (['a', 'b', 'c'] as $busName) {
             $this->assertSame($container->getService('messenger.' . $busName . '.bus'), $busLocator->getMessageBus($busName));
         }
+    }
+
+    /**
+     * @dataProvider dataFailureTransport
+     */
+    public function testFailureTransport(string $receiver, string $failureTransport): void
+    {
+        $container = $this->getContainer(__DIR__ . '/failureTransport.neon');
+
+        $eventDispatcher = $container->getService('messenger.console.eventDispatcher');
+        assert($eventDispatcher instanceof EventDispatcher);
+
+        $eventDispatcher->dispatch(new WorkerMessageFailedEvent(
+            new Envelope(new Message()),
+            $receiver,
+            new Exception()
+        ));
+
+        $transport = $container->getService('messenger.transport.' . $failureTransport);
+        assert($transport instanceof InMemoryTransport);
+
+        $envelope = $transport->getSent()[0] ?? null;
+        $this->assertNotNull($envelope);
+
+        $stamp = $envelope->last(SentToFailureTransportStamp::class);
+        assert($stamp instanceof SentToFailureTransportStamp || $stamp === null);
+
+        $this->assertNotNull($stamp);
+        $this->assertSame($receiver, $stamp->getOriginalReceiverName());
+    }
+
+    /**
+     * @return string[][]
+     */
+    public static function dataFailureTransport(): array
+    {
+        return [
+            'global failure transport' => ['memory2', 'failed'],
+            'specific failure transport' => ['memory1', 'memory2'],
+        ];
     }
 
     /**

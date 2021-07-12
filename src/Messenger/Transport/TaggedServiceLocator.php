@@ -8,6 +8,9 @@ use Fmasa\Messenger\Exceptions\ServiceNotFound;
 use Nette\DI\Container;
 use Psr\Container\ContainerInterface;
 
+use function in_array;
+use function is_array;
+
 // ContainerInterface does not use typehints, so we cannot add them without breaking LSP
 // phpcs:disable SlevomatCodingStandard.TypeHints.ParameterTypeHint
 
@@ -32,7 +35,10 @@ final class TaggedServiceLocator implements ContainerInterface
     public function get($id): object
     {
         foreach ($this->container->findByTag($this->tagName) as $serviceName => $receiverName) {
-            if ($receiverName === $id) {
+            if (
+                $receiverName === $id
+                || (is_array($receiverName) && in_array($id, $receiverName, true))
+            ) {
                 return $this->container->getService($serviceName);
             }
         }
@@ -50,7 +56,10 @@ final class TaggedServiceLocator implements ContainerInterface
     public function has($id): bool
     {
         foreach ($this->container->findByTag($this->tagName) as $receiverName) {
-            if ($receiverName === $id) {
+            if (
+                $receiverName === $id
+                || (is_array($receiverName) && in_array($id, $receiverName, true))
+            ) {
                 return true;
             }
         }

@@ -2,4 +2,5 @@ parameters:
     ignoreErrors:
         - "~Parameter #1 \\$objectOrClass of class ReflectionClass constructor expects class-string<T of object>\\|T of object, string given.~"
         - "~Parameter #1 \\$callback of function call_user_func expects callable\\(\\): mixed, array\\(string, 'getHandledMessages'\\) given\\.~"
-        - '~Cannot access property (\$buses|\$transports|\$routing|\$serializer) on array\|object.~'
+        - '~Cannot access property (\$buses|\$transports|\$routing|\$serializer|\$failureTransport) on array\|object.~'
+        - '~Cannot access property \$failureTransport on Fmasa\\Messenger\\DI\\TransportConfig\|string.~'

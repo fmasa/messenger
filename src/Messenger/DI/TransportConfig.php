@@ -24,4 +24,6 @@ final class TransportConfig
      * @var string|Statement|null
      */
     public $serializer = null;
+
+    public ?string $failureTransport = null;
 }
