@@ -1,0 +1,10 @@
+messenger:
+    buses:
+        default:
+    transports:
+        memory1:
+            dsn: in-memory://a
+            failureTransport: memory2
+        memory2: in-memory://b
+        failed: in-memory://failed
+    failureTransport: failed
