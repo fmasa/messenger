@@ -36,6 +36,7 @@ use Symfony\Component\Messenger\Middleware\SendMessageMiddleware;
 use Symfony\Component\Messenger\RoutableMessageBus;
 use Symfony\Component\Messenger\Transport\InMemoryTransportFactory;
 use Symfony\Component\Messenger\Transport\Serialization\SerializerInterface;
+use Symfony\Component\Messenger\Transport\Sync\SyncTransportFactory;
 use Symfony\Component\Messenger\Transport\TransportFactory;
 
 use function array_filter;
@@ -64,6 +65,7 @@ class MessengerExtension extends CompilerExtension
         'amqp' => AmqpTransportFactory::class,
         'inMemory' => InMemoryTransportFactory::class,
         'redis' => RedisTransportFactory::class,
+        'sync' => SyncTransportFactory::class,
     ];
 
     public function getConfigSchema(): Schema
