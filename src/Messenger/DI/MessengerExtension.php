@@ -44,7 +44,9 @@ use function array_map;
 use function array_merge;
 use function assert;
 use function call_user_func;
+use function class_exists;
 use function count;
+use function is_a;
 use function is_string;
 
 class MessengerExtension extends CompilerExtension
@@ -115,23 +117,21 @@ class MessengerExtension extends CompilerExtension
             $handlers = [];
 
             foreach ($this->getHandlersForBus($busName) as $serviceName) {
-                foreach ($this->getHandledMessageNames($serviceName) as $messageName) {
+                foreach ($this->getHandlerDefinitions($serviceName) as $messageName => $handlerDefinition) {
                     if (! isset($handlers[$messageName])) {
                         $handlers[$messageName] = [];
                     }
 
-                    $alias = $builder->getDefinition($serviceName)->getTag(self::TAG_HANDLER);
-
-                    $handlers[$messageName][$serviceName] = $alias['alias'] ?? null;
+                    $handlers[$messageName][$handlerDefinition->serviceName] = $handlerDefinition;
                 }
             }
 
             if ($busConfig->singleHandlerPerMessage) {
-                foreach ($handlers as $messageName => $messageHandlers) {
-                    if (count($messageHandlers) > 1) {
+                foreach ($handlers as $messageName => $handlerDefinition) {
+                    if (count($handlerDefinition) > 1) {
                         throw MultipleHandlersFound::fromHandlerClasses(
                             $messageName,
-                            array_map([$builder, 'getDefinition'], array_keys($messageHandlers))
+                            array_map([$builder, 'getDefinition'], array_keys($handlerDefinition))
                         );
                     }
                 }
@@ -342,20 +342,32 @@ class MessengerExtension extends CompilerExtension
     }
 
     /**
-     * @return iterable<string>
+     * @return iterable<string, HandlerDefinition>
      *
      * @throws InvalidHandlerService
      */
-    private function getHandledMessageNames(string $serviceName): iterable
+    private function getHandlerDefinitions(string $serviceName): iterable
     {
-        $handlerClassName = $this->getContainerBuilder()->getDefinition($serviceName)->getType();
-        assert(is_string($handlerClassName));
+        $serviceDefinition = $this->getContainerBuilder()->getDefinition($serviceName);
+        $handlerClassName  = $serviceDefinition->getType();
+        $alias             = $serviceDefinition->getTag(self::TAG_HANDLER)['alias'] ?? null;
+        assert(class_exists($handlerClassName));
+        $handlerDefinitions = [];
+
+        if (is_a($handlerClassName, MessageSubscriberInterface::class, true)) {
+            foreach (call_user_func([$handlerClassName, 'getHandledMessages']) as $message => $definition) {
+                $messageName                      = is_string($definition) ? $definition : (string) $message;
+                $handlerDefinitions[$messageName] = new HandlerDefinition(
+                    $serviceName,
+                    $definition['method'] ?? '__invoke',
+                    $alias
+                );
+            }
+
+            return $handlerDefinitions;
+        }
 
         $handlerReflection = new ReflectionClass($handlerClassName);
-
-        if ($handlerReflection->implementsInterface(MessageSubscriberInterface::class)) {
-            return call_user_func([$handlerClassName, 'getHandledMessages']);
-        }
 
         try {
             $method = $handlerReflection->getMethod('__invoke');
@@ -380,7 +392,7 @@ class MessengerExtension extends CompilerExtension
             throw InvalidHandlerService::invalidArgumentType($serviceName, $handlerClassName, $parameterName, $type);
         }
 
-        return [$type->getName()];
+        return [$type->getName() => new HandlerDefinition($serviceName, '__invoke', $alias)];
     }
 
     private function enableTracyIntegration(ClassType $class): void
