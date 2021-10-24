@@ -79,6 +79,24 @@ final class MessengerExtensionTest extends TestCase
         );
     }
 
+    public function testSingleHandlerHandlesMultipleMessages(): void
+    {
+        $container = $this->getContainer(__DIR__ . '/messageSubscribers.neon');
+
+        $messageBus = $container->getService('messenger.default.bus');
+        assert($messageBus instanceof MessageBusInterface);
+
+        $this->assertResultsAreSame(
+            ['message result', 'result from callable'],
+            $messageBus->dispatch(new Message())
+        );
+
+        $this->assertResultsAreSame(
+            ['message2 result'],
+            $messageBus->dispatch(new Message2())
+        );
+    }
+
     /**
      * @return (string|string[])[][]
      */

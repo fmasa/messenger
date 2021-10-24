@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Fmasa\Messenger;
 
+use Fmasa\Messenger\DI\HandlerDefinition;
 use Nette\DI\Container;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\Handler\HandlerDescriptor;
@@ -18,18 +19,18 @@ use function is_callable;
  */
 final class LazyHandlersLocator implements HandlersLocatorInterface
 {
-    /** @var array<string, array<string, string|null>> message type => [handler service name => alias] */
-    private array $handlersMap;
+    /** @var array<string, iterable<HandlerDefinition>> */
+    private array $handlerDefinitions;
 
     private Container $container;
 
     /**
-     * @param array<string, array<string, string|null>> $handlersMap
+     * @param array<string, iterable<HandlerDefinition>> $handlerDefinitions
      */
-    public function __construct(array $handlersMap, Container $container)
+    public function __construct(array $handlerDefinitions, Container $container)
     {
-        $this->handlersMap = $handlersMap;
-        $this->container   = $container;
+        $this->handlerDefinitions = $handlerDefinitions;
+        $this->container          = $container;
     }
 
     /**
@@ -39,12 +40,13 @@ final class LazyHandlersLocator implements HandlersLocatorInterface
     {
         $handlers = [];
 
-        foreach ($this->handlersMap[get_class($envelope->getMessage())] ?? [] as $serviceName => $alias) {
-            $service = $this->container->getService($serviceName);
-
-            assert(is_callable($service));
-
-            $handlers[] = new HandlerDescriptor($service, ['alias' => $alias ?? $serviceName]);
+        foreach ($this->handlerDefinitions[get_class($envelope->getMessage())] ?? [] as $handlerDefinition) {
+            $service = $this->container->getService($handlerDefinition->serviceName);
+            $handler = [$service, $handlerDefinition->methodName];
+            assert(is_callable($handler));
+            $handlers[] = new HandlerDescriptor($handler, [
+                'alias' => $handlerDefinition->alias ?? $handlerDefinition->serviceName,
+            ]);
         }
 
         return $handlers;
