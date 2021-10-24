@@ -3,3 +3,5 @@ extensions:
 
 di:
     debugger: false
+    export:
+        tags:
