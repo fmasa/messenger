@@ -88,6 +88,12 @@ class MessengerExtension extends CompilerExtension
     {
         $builder = $this->getContainerBuilder();
 
+        $this->compiler->addExportedTag(SendersLocator::TAG_SENDER_ALIAS);
+        $this->compiler->addExportedTag(self::TAG_RETRY_STRATEGY);
+        $this->compiler->addExportedTag(self::TAG_FAILURE_TRANSPORT);
+        $this->compiler->addExportedTag(self::TAG_RECEIVER_ALIAS);
+        $this->compiler->addExportedTag(self::TAG_BUS_NAME);
+
         $this->processTransports();
         $this->processRouting();
         $this->processBuses();
