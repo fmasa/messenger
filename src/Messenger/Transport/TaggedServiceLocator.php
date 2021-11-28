@@ -30,7 +30,7 @@ final class TaggedServiceLocator implements ContainerInterface
     }
 
     /**
-     * @var string $id
+     * @param string $id
      */
     public function get($id): object
     {
@@ -51,7 +51,7 @@ final class TaggedServiceLocator implements ContainerInterface
     }
 
     /**
-     * @var string $id
+     * @param string $id
      */
     public function has($id): bool
     {
