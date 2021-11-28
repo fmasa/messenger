@@ -20,9 +20,13 @@ use Fmasa\Messenger\Tracy\MessengerPanel;
 use Nette\Configurator;
 use Nette\DI\Container;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\Console\Input\ArrayInput;
+use Symfony\Component\Console\Output\NullOutput;
 use Symfony\Component\EventDispatcher\EventDispatcher;
+use Symfony\Component\Messenger\Command\ConsumeMessagesCommand;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\Event\WorkerMessageFailedEvent;
+use Symfony\Component\Messenger\Event\WorkerStartedEvent;
 use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\Messenger\RoutableMessageBus;
 use Symfony\Component\Messenger\Stamp\HandledStamp;
@@ -297,6 +301,68 @@ final class MessengerExtensionTest extends TestCase
 
         $this->assertNotNull($stamp);
         $this->assertSame($receiver, $stamp->getOriginalReceiverName());
+    }
+
+    public function testConsumingUsesDefaultEventDispatcher(): void
+    {
+        $container = $this->getContainer(__DIR__ . '/defaultEventDispatcher.neon');
+
+        $eventDispatcher = $container->getService('messenger.console.eventDispatcher');
+        assert($eventDispatcher instanceof EventDispatcher);
+        $this->assertNotEmpty($eventDispatcher->getListeners());
+
+        $consumeMessagesCommand = $container->getService('messenger.console.command.consumeMessages');
+        assert($consumeMessagesCommand instanceof ConsumeMessagesCommand);
+
+        $listenerInvoked = false;
+        $eventDispatcher->addListener(
+            WorkerStartedEvent::class,
+            static function (WorkerStartedEvent $event) use (&$listenerInvoked): void {
+                $listenerInvoked = true;
+                $event->getWorker()->stop();
+            }
+        );
+
+        $input = new ArrayInput([
+            'receivers' => ['test'],
+            '--memory-limit' => 1,
+            '--sleep' => 1,
+        ]);
+        $consumeMessagesCommand->run($input, new NullOutput());
+
+        $this->assertTrue($listenerInvoked);
+    }
+
+    public function testConsumingUsesAutowiredEventDispatcher(): void
+    {
+        $container = $this->getContainer(__DIR__ . '/autowiredEventDispatcher.neon');
+
+        $this->assertFalse($container->hasService('messenger.console.eventDispatcher'));
+
+        $eventDispatcher = $container->getService('eventDispatcher');
+        assert($eventDispatcher instanceof EventDispatcher);
+        $this->assertNotEmpty($eventDispatcher->getListeners());
+
+        $consumeMessagesCommand = $container->getService('messenger.console.command.consumeMessages');
+        assert($consumeMessagesCommand instanceof ConsumeMessagesCommand);
+
+        $listenerInvoked = false;
+        $eventDispatcher->addListener(
+            WorkerStartedEvent::class,
+            static function (WorkerStartedEvent $event) use (&$listenerInvoked): void {
+                $listenerInvoked = true;
+                $event->getWorker()->stop();
+            }
+        );
+
+        $input = new ArrayInput([
+            'receivers' => ['test'],
+            '--memory-limit' => 1,
+            '--sleep' => 1,
+        ]);
+        $consumeMessagesCommand->run($input, new NullOutput());
+
+        $this->assertTrue($listenerInvoked);
     }
 
     /**
