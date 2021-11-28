@@ -2,7 +2,4 @@ parameters:
     ignoreErrors:
         - '~Cannot access property (\$buses|\$transports|\$routing|\$serializer|\$failureTransport) on array\|object\.~'
         - '~Cannot access property \$failureTransport on Fmasa\\Messenger\\DI\\TransportConfig\|string\.~'
-        - '~Unable to resolve the template type T in call to method Nette\\DI\\ContainerBuilder::addDefinition\(~'
-        - '~Call to an undefined method Nette\\DI\\Definitions\\Definition::setArguments\(~'
-        - '~Call to an undefined method Nette\\DI\\Definitions\\Definition::setFactory\(~'
-        - '~Call to protected method setType\(\) of class Nette\\DI\\Definitions\\Definition\.~'
+        - '~Parameter #1 \$callback of function array_map expects \(callable\(array<Symfony\\Component\\Messenger\\Stamp\\StampInterface>\|Symfony\\Component\\Messenger\\Stamp\\StampInterface\): mixed\)\|null~'
