@@ -37,6 +37,7 @@ use Symfony\Component\Messenger\RoutableMessageBus;
 use Symfony\Component\Messenger\Transport\InMemoryTransportFactory;
 use Symfony\Component\Messenger\Transport\Serialization\SerializerInterface;
 use Symfony\Component\Messenger\Transport\TransportFactory;
+use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 
 use function array_filter;
 use function array_keys;
@@ -151,6 +152,7 @@ class MessengerExtension extends CompilerExtension
             $handlersLocator->setArguments([$handlers]);
         }
 
+        $this->setupEventDispatcher();
         $this->passRegisteredTransportFactoriesToMainFactory();
     }
 
@@ -234,16 +236,8 @@ class MessengerExtension extends CompilerExtension
             ->setFactory(TaggedServiceLocator::class, [self::TAG_RECEIVER_ALIAS])
             ->setAutowired(false);
 
-        $eventDispatcher = $builder->addDefinition($this->prefix('console.eventDispatcher'))
-            ->setFactory(EventDispatcher::class)
-            ->setAutowired(false);
-
-        foreach ($this->getSubscribers() as $subscriber) {
-            $eventDispatcher->addSetup('addSubscriber', [$subscriber]);
-        }
-
         $builder->addDefinition($this->prefix('console.command.consumeMessages'))
-            ->setFactory(ConsumeMessagesCommand::class, [$routableBus, $receiverLocator, $eventDispatcher]);
+            ->setFactory(ConsumeMessagesCommand::class, [$routableBus, $receiverLocator]);
     }
 
     private function processTransports(): void
@@ -414,6 +408,34 @@ class MessengerExtension extends CompilerExtension
     private function isPanelEnabled(): bool
     {
         return $this->getContainerBuilder()->findByType(LogToPanelMiddleware::class) !== [];
+    }
+
+    private function setupEventDispatcher(): void
+    {
+        $builder = $this->getContainerBuilder();
+
+        $eventDispatcherServiceName = $builder->getByType(EventDispatcherInterface::class);
+
+        if ($eventDispatcherServiceName === null) {
+            $eventDispatcher = $builder->addDefinition($this->prefix('console.eventDispatcher'))
+                ->setFactory(EventDispatcher::class)
+                ->setAutowired(false);
+
+            $consumeMessagesCommand = $builder->getDefinition($this->prefix('console.command.consumeMessages'));
+            assert($consumeMessagesCommand instanceof ServiceDefinition);
+
+            if (! isset($consumeMessagesCommand->getFactory()->arguments[2])) {
+                $consumeMessagesCommand->getFactory()->arguments[2] = $eventDispatcher;
+            }
+        } else {
+            $eventDispatcher = $builder->getDefinition($eventDispatcherServiceName);
+        }
+
+        assert($eventDispatcher instanceof ServiceDefinition);
+
+        foreach ($this->getSubscribers() as $subscriber) {
+            $eventDispatcher->addSetup('addSubscriber', [$subscriber]);
+        }
     }
 
     private function passRegisteredTransportFactoriesToMainFactory(): void

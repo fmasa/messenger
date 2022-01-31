@@ -1,0 +1,8 @@
+messenger:
+    buses:
+        default:
+    transports:
+        test: in-memory://
+
+services:
+    eventDispatcher: Symfony\Component\EventDispatcher\EventDispatcher

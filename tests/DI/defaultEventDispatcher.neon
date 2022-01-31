@@ -1,0 +1,5 @@
+messenger:
+    buses:
+        default:
+    transports:
+        test: in-memory://
