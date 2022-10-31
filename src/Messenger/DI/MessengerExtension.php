@@ -20,6 +20,7 @@ use Nette\Schema\Schema;
 use ReflectionClass;
 use ReflectionException;
 use ReflectionNamedType;
+use ReflectionUnionType;
 use Symfony\Component\EventDispatcher\EventDispatcher;
 use Symfony\Component\Messenger\Bridge\Amqp\Transport\AmqpTransportFactory;
 use Symfony\Component\Messenger\Bridge\Redis\Transport\RedisTransportFactory;
@@ -39,16 +40,17 @@ use Symfony\Component\Messenger\Transport\Serialization\SerializerInterface;
 use Symfony\Component\Messenger\Transport\TransportFactory;
 use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 
-use function array_filter;
+use function array_fill_keys;
 use function array_keys;
 use function array_map;
 use function array_merge;
 use function assert;
-use function call_user_func;
 use function class_exists;
 use function count;
-use function is_a;
+use function is_callable;
+use function is_int;
 use function is_string;
+use function krsort;
 
 class MessengerExtension extends CompilerExtension
 {
@@ -123,22 +125,18 @@ class MessengerExtension extends CompilerExtension
 
             $handlers = [];
 
-            foreach ($this->getHandlersForBus($busName) as $serviceName) {
-                foreach ($this->getHandlerDefinitions($serviceName) as $messageName => $handlerDefinition) {
-                    if (! isset($handlers[$messageName])) {
-                        $handlers[$messageName] = [];
-                    }
-
+            foreach ($this->getHandlerDefinitionsForBus($busName) as $messageName => $handlerDefinitions) {
+                foreach ($handlerDefinitions as $handlerDefinition) {
                     $handlers[$messageName][$handlerDefinition->serviceName] = $handlerDefinition;
                 }
             }
 
             if ($busConfig->singleHandlerPerMessage) {
-                foreach ($handlers as $messageName => $handlerDefinition) {
-                    if (count($handlerDefinition) > 1) {
+                foreach ($handlers as $messageName => $handlerDefinitions) {
+                    if (count($handlerDefinitions) > 1) {
                         throw MultipleHandlersFound::fromHandlerClasses(
                             $messageName,
-                            array_map([$builder, 'getDefinition'], array_keys($handlerDefinition))
+                            array_map([$builder, 'getDefinition'], array_keys($handlerDefinitions))
                         );
                     }
                 }
@@ -317,11 +315,14 @@ class MessengerExtension extends CompilerExtension
     }
 
     /**
-     * @return string[] Service names
+     * @return iterable<string, iterable<HandlerDefinition>>
+     *
+     * @throws InvalidHandlerService
      */
-    private function getHandlersForBus(string $busName): array
+    private function getHandlerDefinitionsForBus(string $busName): iterable
     {
-        $builder = $this->getContainerBuilder();
+        $builder                     = $this->getContainerBuilder();
+        $handlerDefinitionsByMessage = [];
 
         /** @var string[] $serviceNames */
         $serviceNames = array_keys(
@@ -331,68 +332,129 @@ class MessengerExtension extends CompilerExtension
             )
         );
 
-        return array_filter(
-            $serviceNames,
-            static function (string $serviceName) use ($builder, $busName): bool {
-                $definition = $builder->getDefinition($serviceName);
+        foreach ($serviceNames as $serviceName) {
+            $serviceDefinition = $builder->getDefinition($serviceName);
+            $handlerClassName  = $serviceDefinition->getType();
+            $tag               = $serviceDefinition->getTag(self::TAG_HANDLER);
+            $alias             = $tag['alias'] ?? null;
+            assert(class_exists($handlerClassName));
 
-                return ($definition->getTag(self::TAG_HANDLER)['bus'] ?? $busName) === $busName;
-            }
-        );
-    }
-
-    /**
-     * @return iterable<string, HandlerDefinition>
-     *
-     * @throws InvalidHandlerService
-     */
-    private function getHandlerDefinitions(string $serviceName): iterable
-    {
-        $serviceDefinition = $this->getContainerBuilder()->getDefinition($serviceName);
-        $handlerClassName  = $serviceDefinition->getType();
-        $alias             = $serviceDefinition->getTag(self::TAG_HANDLER)['alias'] ?? null;
-        assert(class_exists($handlerClassName));
-        $handlerDefinitions = [];
-
-        if (is_a($handlerClassName, MessageSubscriberInterface::class, true)) {
-            foreach (call_user_func([$handlerClassName, 'getHandledMessages']) as $message => $definition) {
-                $messageName                      = is_string($definition) ? $definition : (string) $message;
-                $handlerDefinitions[$messageName] = new HandlerDefinition(
-                    $serviceName,
-                    $definition['method'] ?? '__invoke',
-                    $alias
-                );
+            if ($busName !== ($tag['bus'] ?? $busName)) {
+                continue;
             }
 
-            return $handlerDefinitions;
+            $handlerReflection = new ReflectionClass($handlerClassName);
+
+            if (isset($tag['handles'])) {
+                $handles = isset($tag['method']) ? [$tag['handles'] => $tag['method']] : [$tag['handles']];
+            } else {
+                $handles = $this->guessHandledClasses($handlerReflection, $serviceName, $tag['method'] ?? '__invoke');
+            }
+
+            foreach ($handles as $message => $options) {
+                if (is_int($message)) {
+                    $message = (string) $options;
+                    $options = [];
+                }
+
+                if (is_string($options)) {
+                    $options = ['method' => $options];
+                }
+
+                if (isset($options['bus']) && $options['bus'] !== $busName) {
+                    continue;
+                }
+
+                if (! isset($options['from_transport']) && isset($tag['from_transport'])) {
+                    $options['from_transport'] = $tag['from_transport'];
+                }
+
+                $priority = $tag['priority'] ?? $options['priority'] ?? 0;
+                $method   = $options['method'] ?? '__invoke';
+
+                if (! $handlerReflection->hasMethod($method)) {
+                    throw InvalidHandlerService::missingHandlerMethod($serviceName, $handlerClassName, $method);
+                }
+
+                if ($alias !== null) {
+                    $options['alias'] = $alias;
+                }
+
+                $handlerDefinitionsByMessage[(string) $message][$priority][] = new HandlerDefinition($serviceName, $method, $options);
+            }
         }
 
-        $handlerReflection = new ReflectionClass($handlerClassName);
+        foreach ($handlerDefinitionsByMessage as $message => $handlersByPriority) {
+            krsort($handlersByPriority);
+            $handlerDefinitionsByMessage[$message] = array_merge(...$handlersByPriority);
+        }
+
+        return $handlerDefinitionsByMessage;
+    }
+
+	/**
+	 * @param ReflectionClass<object> $handlerReflection
+	 * @param string $serviceName
+	 * @param string $methodName
+	 *
+	 * @return iterable<string>
+	 *
+	 * @throws \Fmasa\Messenger\Exceptions\InvalidHandlerService
+	 */
+    private function guessHandledClasses(ReflectionClass $handlerReflection, string $serviceName, string $methodName): iterable
+    {
+        $handlerClassName = $handlerReflection->getName();
+
+        if ($handlerReflection->implementsInterface(MessageSubscriberInterface::class)) {
+            $getHandledMessages = [$handlerClassName, 'getHandledMessages'];
+
+            if (is_callable($getHandledMessages)) {
+                return $getHandledMessages();
+            }
+        }
 
         try {
-            $method = $handlerReflection->getMethod('__invoke');
+            $method = $handlerReflection->getMethod($methodName);
         } catch (ReflectionException $e) {
-            throw InvalidHandlerService::missingInvokeMethod($serviceName, $handlerReflection->getName());
+            throw InvalidHandlerService::missingHandlerMethod($serviceName, $handlerClassName, $methodName);
         }
 
         if ($method->getNumberOfRequiredParameters() !== 1) {
-            throw InvalidHandlerService::wrongAmountOfArguments($serviceName, $handlerReflection->getName());
+            throw InvalidHandlerService::wrongAmountOfArguments($serviceName, $handlerClassName, $methodName);
         }
 
         $parameter     = $method->getParameters()[0];
         $parameterName = $parameter->getName();
         $type          = $parameter->getType();
-        assert($type instanceof ReflectionNamedType || $type === null);
+        assert($type instanceof ReflectionNamedType || $type instanceof ReflectionUnionType || $type === null);
 
         if ($type === null) {
-            throw InvalidHandlerService::missingArgumentType($serviceName, $handlerClassName, $parameterName);
+            throw InvalidHandlerService::missingArgumentType($serviceName, $handlerClassName, $methodName, $parameterName);
+        }
+
+        if ($type instanceof ReflectionUnionType) {
+            $types        = [];
+            $invalidTypes = [];
+            foreach ($type->getTypes() as $type) {
+                if (! $type->isBuiltin()) {
+                    $types[] = (string) $type;
+                } else {
+                    $invalidTypes[] = (string) $type;
+                }
+            }
+
+            if ($types) {
+                return $methodName === '__invoke' ? $types : array_fill_keys($types, $methodName);
+            }
+
+            throw InvalidHandlerService::invalidArgumentUnionType($serviceName, $handlerClassName, $methodName, $parameterName, $invalidTypes);
         }
 
         if ($type->isBuiltin()) {
-            throw InvalidHandlerService::invalidArgumentType($serviceName, $handlerClassName, $parameterName, $type);
+            throw InvalidHandlerService::invalidArgumentType($serviceName, $handlerClassName, $methodName, $parameterName, $type);
         }
 
-        return [$type->getName() => new HandlerDefinition($serviceName, '__invoke', $alias)];
+        return $methodName === '__invoke' ? [$type->getName()] : [$type->getName() => $methodName];
     }
 
     private function enableTracyIntegration(ClassType $class): void

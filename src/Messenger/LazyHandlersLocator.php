@@ -9,6 +9,7 @@ use Nette\DI\Container;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\Handler\HandlerDescriptor;
 use Symfony\Component\Messenger\Handler\HandlersLocatorInterface;
+use Symfony\Component\Messenger\Stamp\ReceivedStamp;
 
 use function assert;
 use function get_class;
@@ -44,11 +45,36 @@ final class LazyHandlersLocator implements HandlersLocatorInterface
             $service = $this->container->getService($handlerDefinition->serviceName);
             $handler = [$service, $handlerDefinition->methodName];
             assert(is_callable($handler));
-            $handlers[] = new HandlerDescriptor($handler, [
-                'alias' => $handlerDefinition->alias ?? $handlerDefinition->serviceName,
-            ]);
+
+            $options            = $handlerDefinition->options;
+            $options['alias'] ??= $handlerDefinition->serviceName;
+
+            $handlerDescriptor = new HandlerDescriptor($handler, $options);
+
+            if (! $this->shouldHandle($envelope, $handlerDescriptor)) {
+                continue;
+            }
+
+            $handlers[] = $handlerDescriptor;
         }
 
         return $handlers;
+    }
+
+    private function shouldHandle(Envelope $envelope, HandlerDescriptor $handlerDescriptor): bool
+    {
+        $received = $envelope->last(ReceivedStamp::class);
+
+        if (! $received instanceof ReceivedStamp) {
+            return true;
+        }
+
+        $expectedTransport = $handlerDescriptor->getOption('from_transport');
+
+        if ($expectedTransport === null) {
+            return true;
+        }
+
+        return $received->getTransportName() === $expectedTransport;
     }
 }
