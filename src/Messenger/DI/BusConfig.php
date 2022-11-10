@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Fmasa\Messenger\DI;
 
-use Nette\DI\Statement;
+use Nette\DI\Definitions\Statement;
 
 /**
  * @internal
