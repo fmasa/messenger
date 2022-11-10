@@ -1,0 +1,15 @@
+messenger:
+    buses:
+        default:
+    transports:
+        memory1: in-memory://a
+        memory2: in-memory://b
+    routing:
+        Fixtures\Message: [memory1, memory2]
+
+services:
+    -
+        factory: Fixtures\Handler('message from memory1 transport result')
+        tags:
+            messenger.messageHandler:
+                from_transport: memory1

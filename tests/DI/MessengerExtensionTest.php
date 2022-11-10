@@ -27,6 +27,7 @@ use Symfony\Component\Messenger\Command\ConsumeMessagesCommand;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\Event\WorkerMessageFailedEvent;
 use Symfony\Component\Messenger\Event\WorkerStartedEvent;
+use Symfony\Component\Messenger\Handler\HandlersLocatorInterface;
 use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\Messenger\RoutableMessageBus;
 use Symfony\Component\Messenger\Stamp\HandledStamp;
@@ -101,6 +102,70 @@ final class MessengerExtensionTest extends TestCase
         );
     }
 
+    public function testMessageSubscribersWithBusOption(): void
+    {
+        $container = $this->getContainer(__DIR__ . '/messageSubscribers.withBusOption.neon');
+
+        $defaultBus = $container->getService('messenger.default.bus');
+        $otherBus   = $container->getService('messenger.other.bus');
+        assert($defaultBus instanceof MessageBusInterface && $otherBus instanceof MessageBusInterface);
+
+        $this->assertResultsAreSame(
+            ['result from callable'],
+            $defaultBus->dispatch(new Message())
+        );
+
+        $this->assertResultsAreSame(
+            ['result from callable', 'message with bus option result'],
+            $otherBus->dispatch(new Message())
+        );
+    }
+
+    public function testMessageSubscribersWithPriorityOption(): void
+    {
+        $container = $this->getContainer(__DIR__ . '/messageSubscribers.withPriorityOption.neon');
+
+        $defaultBus = $container->getService('messenger.default.bus');
+        assert($defaultBus instanceof MessageBusInterface);
+
+        $this->assertResultsAreSame(
+            ['message with higher priority result', 'result from callable'],
+            $defaultBus->dispatch(new Message())
+        );
+    }
+
+    /**
+     * @param array<string> $transportNames
+     * @param array<string> $resultMessages
+     *
+     * @dataProvider dataHandlersWithFromTransportOption
+     */
+    public function testHandlersWithFromTransportOption(string $configFile, array $transportNames, array $resultMessages): void
+    {
+        $container = $this->getContainer($configFile);
+
+        $defaultBus      = $container->getService('messenger.default.bus');
+        $handlersLocator = $container->getService('messenger.default.handlersLocator');
+        assert($defaultBus instanceof MessageBusInterface && $handlersLocator instanceof HandlersLocatorInterface);
+
+        $envelope = $defaultBus->dispatch(new Message());
+
+        $this->assertResultsAreSame([], $envelope);
+
+        $this->assertSame(
+            $transportNames,
+            array_map(static fn (SentStamp $stamp): string => $stamp->getSenderAlias(), $envelope->all(SentStamp::class))
+        );
+
+        $results = [];
+
+        foreach ($handlersLocator->getHandlers($envelope) as $handlerDescriptor) {
+            $results[] = $handlerDescriptor->getHandler()($envelope->getMessage());
+        }
+
+        $this->assertSame($resultMessages, $results);
+    }
+
     /**
      * @return (string|string[])[][]
      */
@@ -110,6 +175,19 @@ final class MessengerExtensionTest extends TestCase
             [__DIR__ . '/multipleHandlers.neon', ['first result', 'second result', 'fixed result']],
             [__DIR__ . '/multipleHandlersWithAliases.neon', ['first result', 'second result', 'fixed result']],
             [__DIR__ . '/multipleHandlersWithSameAlias.neon', ['first result', 'fixed result']],
+            [__DIR__ . '/multipleHandlersWithHandlesAndMethod.neon', ['result from handleWithArgumentType()', 'result from handleWithoutArgumentType()']],
+            [__DIR__ . '/multipleHandlersWithPriority.neon', ['result with priority +10', 'result with the default priority', 'result with priority -10']],
+        ];
+    }
+
+    /**
+     * @return array<array{0: string, 1: array<string>, 2: array<string>}>
+     */
+    public static function dataHandlersWithFromTransportOption(): array
+    {
+        return [
+            [__DIR__ . '/multipleHandlersWithFromTransport.neon', ['memory1', 'memory2'], ['message from memory1 transport result']],
+            [__DIR__ . '/messageSubscribers.withFromTransportOption.neon', ['memory1', 'memory2'], ['message from memory1 transport result']],
         ];
     }
 

@@ -392,15 +392,13 @@ class MessengerExtension extends CompilerExtension
         return $handlerDefinitionsByMessage;
     }
 
-	/**
-	 * @param ReflectionClass<object> $handlerReflection
-	 * @param string $serviceName
-	 * @param string $methodName
-	 *
-	 * @return iterable<string>
-	 *
-	 * @throws \Fmasa\Messenger\Exceptions\InvalidHandlerService
-	 */
+    /**
+     * @param ReflectionClass<object> $handlerReflection
+     *
+     * @return iterable<string>
+     *
+     * @throws InvalidHandlerService
+     */
     private function guessHandledClasses(ReflectionClass $handlerReflection, string $serviceName, string $methodName): iterable
     {
         $handlerClassName = $handlerReflection->getName();
