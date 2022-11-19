@@ -1,0 +1,17 @@
+messenger:
+    buses:
+        command:
+            singleHandlerPerMessage: true
+            middleware:
+                - Fixtures\StampAddingMiddleware(Fixtures\Stamp('first command'))
+                - @registeredServiceMiddleware
+        event:
+            middleware:
+                - Fixtures\StampAddingMiddleware(Fixtures\Stamp('first event'))
+                - @registeredServiceMiddleware
+
+services:
+    # Middleware registered as a service and shared by multiple buses.
+    registeredServiceMiddleware: Fixtures\StampAddingMiddleware(Fixtures\Stamp('second registered'))
+    - class: Fixtures\Handler
+      tags: [messenger.messageHandler]
