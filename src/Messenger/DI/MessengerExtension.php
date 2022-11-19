@@ -100,13 +100,12 @@ class MessengerExtension extends CompilerExtension
         $this->processBuses();
         $this->processConsoleCommands();
 
-        if (! $this->isPanelEnabled()) {
+        if (! $this->isPanelEnabledForAnyBus()) {
             return;
         }
 
         $builder->addDefinition($this->prefix(self::PANEL_SERVICE_NAME))
-            ->setType(MessengerPanel::class)
-            ->setArguments([$this->getContainerBuilder()->findByType(LogToPanelMiddleware::class)]);
+            ->setType(MessengerPanel::class);
     }
 
     /**
@@ -154,11 +153,21 @@ class MessengerExtension extends CompilerExtension
 
         $this->setupEventDispatcher();
         $this->passRegisteredTransportFactoriesToMainFactory();
+
+        if (! $this->isPanelMiddlewareRegistered()) {
+            return;
+        }
+
+        $panel = $builder->getDefinition($this->prefix(self::PANEL_SERVICE_NAME));
+
+        assert($panel instanceof ServiceDefinition);
+
+        $panel->setArguments([$this->getContainerBuilder()->findByType(LogToPanelMiddleware::class)]);
     }
 
     public function afterCompile(ClassType $class): void
     {
-        if (! $this->isPanelEnabled()) {
+        if (! $this->isPanelMiddlewareRegistered()) {
             return;
         }
 
@@ -405,9 +414,21 @@ class MessengerExtension extends CompilerExtension
         ]));
     }
 
-    private function isPanelEnabled(): bool
+    private function isPanelMiddlewareRegistered(): bool
     {
         return $this->getContainerBuilder()->findByType(LogToPanelMiddleware::class) !== [];
+    }
+
+    private function isPanelEnabledForAnyBus(): bool
+    {
+        foreach ($this->getConfig()->buses as $busConfig) {
+            assert($busConfig instanceof BusConfig);
+            if ($busConfig->panel) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function setupEventDispatcher(): void
