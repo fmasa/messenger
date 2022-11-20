@@ -58,6 +58,35 @@ final class MessengerExtensionTest extends TestCase
         $this->assertSame('second', $stamps[1]->getValue());
     }
 
+    public function testAddingMiddlewareAsRegisteredService(): void
+    {
+        $container = $this->getContainer(__DIR__ . '/middlewares.withRegisteredServiceReference.neon');
+
+        $commandBus = $container->getService('messenger.command.bus');
+        assert($commandBus instanceof MessageBusInterface);
+
+        $eventBus = $container->getService('messenger.event.bus');
+        assert($eventBus instanceof MessageBusInterface);
+
+        $commandEnvelope = $commandBus->dispatch(new Message());
+        /** @var Stamp[] $commandStamps */
+        $commandStamps = $commandEnvelope->all(Stamp::class);
+
+        $eventEnvelope = $eventBus->dispatch(new Message());
+        /** @var Stamp[] $eventStamps */
+        $eventStamps = $eventEnvelope->all(Stamp::class);
+
+        $this->assertCount(2, $commandStamps);
+        $this->assertSame('first command', $commandStamps[0]->getValue());
+        $this->assertSame('second registered', $commandStamps[1]->getValue());
+
+        $this->assertCount(2, $eventStamps);
+        $this->assertSame('first event', $eventStamps[0]->getValue());
+        $this->assertSame('second registered', $eventStamps[1]->getValue());
+
+        $this->assertSame($commandStamps[1], $eventStamps[1]);
+    }
+
     public function testExceptionIsThrownIfThereAreMultipleHandlersWhenSingleHandlerPerMessageIsTrue(): void
     {
         $this->expectException(MultipleHandlersFound::class);
