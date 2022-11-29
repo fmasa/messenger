@@ -257,6 +257,10 @@ class MessengerExtension extends CompilerExtension
             ->setFactory(TransportFactory::class);
 
         foreach (self::DEFAULT_FACTORIES as $name => $factoryClass) {
+            if (! class_exists($factoryClass)) {
+                continue;
+            }
+
             $builder->addDefinition($this->prefix('transportFactory.' . $name))
                 ->setFactory($factoryClass)
                 ->setTags([self::TAG_TRANSPORT_FACTORY => true]);
