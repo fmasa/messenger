@@ -84,6 +84,27 @@ final class MessengerExtensionTest extends TestCase
         );
     }
 
+    /**
+     * @requires PHP >= 8.0
+     */
+    public function testHandlerWithUnionTypeHandlesMultipleMessages(): void
+    {
+        $container = $this->getContainer(__DIR__ . '/handlerWithUnionArgumentType.neon');
+
+        $messageBus = $container->getService('messenger.default.bus');
+        assert($messageBus instanceof MessageBusInterface);
+
+        $this->assertResultsAreSame(
+            ['the result'],
+            $messageBus->dispatch(new Message())
+        );
+
+        $this->assertResultsAreSame(
+            ['the result'],
+            $messageBus->dispatch(new Message2())
+        );
+    }
+
     public function testSingleHandlerHandlesMultipleMessages(): void
     {
         $container = $this->getContainer(__DIR__ . '/messageSubscribers.neon');
@@ -214,6 +235,16 @@ final class MessengerExtensionTest extends TestCase
     }
 
     /**
+     * @requires PHP >= 8.0
+     */
+    public function testHandlerWithInvalidUnionArgumentTypeThrowException(): void
+    {
+        $this->expectException(InvalidHandlerService::class);
+
+        $this->getContainer(__DIR__ . '/invalidHandler.invalidUnionArgumentType.neon');
+    }
+
+    /**
      * @return string[][]
      */
     public function dataInvalidHandlerConfigs(): array
@@ -242,8 +273,8 @@ final class MessengerExtensionTest extends TestCase
 
         $panel = $container->getByType(MessengerPanel::class);
 
-        $this->assertRegExp('~2\+1 messages~', $panel->getTab());
-        $this->assertRegExp('~Handled messages~', $panel->getPanel());
+        $this->assertMatchesRegularExpression('~2\+1 messages~', $panel->getTab());
+        $this->assertMatchesRegularExpression('~Handled messages~', $panel->getPanel());
     }
 
     public function testLogToPanelMiddlewareIsNotRegisteredIfPanelIsDisabled(): void

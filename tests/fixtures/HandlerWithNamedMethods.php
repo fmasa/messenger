@@ -8,7 +8,7 @@ use InvalidArgumentException;
 
 use function sprintf;
 
-class HandlerWithNamedMethods
+final class HandlerWithNamedMethods
 {
     private string $result;
 

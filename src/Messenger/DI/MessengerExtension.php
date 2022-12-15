@@ -441,7 +441,7 @@ class MessengerExtension extends CompilerExtension
                 }
             }
 
-            if ($types) {
+            if (count($types) > 0) {
                 return $methodName === '__invoke' ? $types : array_fill_keys($types, $methodName);
             }
 
