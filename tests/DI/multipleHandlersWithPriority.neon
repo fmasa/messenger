@@ -1,0 +1,18 @@
+messenger:
+    buses:
+        default:
+
+services:
+    -
+        factory: Fixtures\Handler('result with priority -10')
+        tags:
+            messenger.messageHandler:
+                priority: -10
+    -
+        factory: Fixtures\Handler('result with the default priority')
+        tags: [messenger.messageHandler]
+    -
+        factory: Fixtures\Handler('result with priority +10')
+        tags:
+            messenger.messageHandler:
+                priority: 10

@@ -1,0 +1,7 @@
+messenger:
+    buses:
+        default:
+
+services:
+    - factory: Fixtures\HandlerWithUnionArgumentType('the result')
+      tags: [messenger.messageHandler]

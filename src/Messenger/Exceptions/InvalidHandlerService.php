@@ -8,53 +8,80 @@ use Exception;
 use ReflectionNamedType;
 use ReflectionType;
 
+use function implode;
 use function sprintf;
 
 final class InvalidHandlerService extends Exception
 {
-    public static function missingInvokeMethod(string $serviceName, string $className): self
+    public static function missingHandlerMethod(string $serviceName, string $className, string $methodName): self
     {
         return new self(sprintf(
-            'Invalid handler service "%s": class "%s" must have an "__invoke()" method.',
+            'Invalid handler service "%s": class "%s" must have an "%s()" method.',
             $serviceName,
-            $className
+            $className,
+            $methodName
         ));
     }
 
-    public static function missingArgumentType(string $serviceName, string $className, string $parameterName): self
+    public static function missingArgumentType(string $serviceName, string $className, string $methodName, string $parameterName): self
     {
         return new self(sprintf(
-            'Invalid handler service "%s": argument "$%s" of method "%s::__invoke()"'
+            'Invalid handler service "%s": argument "$%s" of method "%s::%s()"'
             . ' must have a type-hint corresponding to the message class it handles.',
             $serviceName,
             $parameterName,
-            $className
+            $className,
+            $methodName
         ));
     }
 
-    public static function wrongAmountOfArguments(string $serviceName, string $className): self
+    public static function wrongAmountOfArguments(string $serviceName, string $className, string $methodName): self
     {
         return new self(sprintf(
-            'Invalid handler service "%s": method "%s::__invoke()" requires exactly one argument,'
+            'Invalid handler service "%s": method "%s::%s()" requires exactly one argument,'
             . ' first one being the message it handles.',
             $serviceName,
-            $className
+            $className,
+            $methodName
         ));
     }
 
     public static function invalidArgumentType(
         string $serviceName,
         string $className,
+        string $methodName,
         string $parameterName,
         ReflectionType $type
     ): self {
         return new self(sprintf(
             'Invalid handler service "%s": type-hint of argument "$%s"'
-            . ' in method "%s::__invoke()" must be a class , "%s" given.',
+            . ' in method "%s::%s()" must be a class , "%s" given.',
             $serviceName,
             $parameterName,
             $className,
+            $methodName,
             $type instanceof ReflectionNamedType ? $type->getName() : (string) $type
+        ));
+    }
+
+    /**
+     * @param array<string> $types
+     */
+    public static function invalidArgumentUnionType(
+        string $serviceName,
+        string $className,
+        string $methodName,
+        string $parameterName,
+        array $types
+    ): self {
+        return new self(sprintf(
+            'Invalid handler service "%s": type-hint of argument "$%s"'
+            . ' in method "%s::%s()" must be a class , "%s" given.',
+            $serviceName,
+            $parameterName,
+            $className,
+            $methodName,
+            implode('|', $types)
         ));
     }
 }

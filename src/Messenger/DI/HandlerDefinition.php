@@ -13,12 +13,16 @@ final class HandlerDefinition
 
     public string $methodName;
 
-    public ?string $alias;
+    /** @var array<string, mixed> */
+    public array $options;
 
-    public function __construct(string $serviceName, string $methodName, ?string $alias = null)
+    /**
+     * @param array<string, mixed> $options
+     */
+    public function __construct(string $serviceName, string $methodName, array $options)
     {
         $this->serviceName = $serviceName;
         $this->methodName  = $methodName;
-        $this->alias       = $alias;
+        $this->options     = $options;
     }
 }

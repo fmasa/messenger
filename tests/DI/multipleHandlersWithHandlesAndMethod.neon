@@ -1,0 +1,16 @@
+messenger:
+    buses:
+        default:
+
+services:
+    -
+        factory: Fixtures\HandlerWithNamedMethods('result from handleWithArgumentType()')
+        tags:
+            messenger.messageHandler:
+                method: handleWithArgumentType
+    -
+        factory: Fixtures\HandlerWithNamedMethods('result from handleWithoutArgumentType()')
+        tags:
+            messenger.messageHandler:
+                method: handleWithoutArgumentType
+                handles: Fixtures\Message

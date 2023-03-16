@@ -1,0 +1,11 @@
+messenger:
+    buses:
+        default:
+    transports:
+        memory1: in-memory://a
+        memory2: in-memory://b
+    routing:
+        Fixtures\Message: [memory1, memory2]
+
+services:
+    - Fixtures\MessageSubscriberWithFromTransportOption

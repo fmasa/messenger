@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Fixtures;
 
-class Handler
+final class HandlerWithUnionArgumentType
 {
     private bool $called = false;
 
@@ -15,7 +15,7 @@ class Handler
         $this->result = $result;
     }
 
-    public function __invoke(Message $message): ?string
+    public function __invoke(Message|Message2 $message): ?string
     {
         $this->called = true;
 
